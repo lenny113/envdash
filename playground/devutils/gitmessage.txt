@@ -1,0 +1,10 @@
+# Commit message template
+# scope(type): short header explaining the change
+
+# one line explaining how this works today
+
+
+# one line explaining why the commit is necessary
+
+
+# one or more lines explaining the solution / tradeoffs
