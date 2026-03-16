@@ -12,4 +12,5 @@ func DefaultHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		utils.SetMessageForLogger(w, "Error writing response from default handler")
 	}
+	utils.SetMessageForLogger(w, "Successfull response from default handler")
 }
