@@ -146,7 +146,7 @@ Furhermore, this function also checks if the generated API key is empty or incom
 */
 func isAPIKeyUsed(key string) bool {
 	//check if api key is already in use, if so, generate a new one (this is very unlikely, but we want to be sure)
-	usedAPIKey := "sk-envdash-4597dc2d89e56c8e0cde3d3b9f42bdfa" // simulates a used api key
+	usedAPIKey := "sk-envdash-4597dc2d89e56c8e0cde3d3b9f42bdfa" // TODO: change this with firestore after we have finished the firestore handler
 
 	//here we want to check if the generated API key were made or not, if no api key were made, send true
 	if key == "" {
