@@ -26,6 +26,7 @@ func main() {
 	router := http.NewServeMux()
 
 	router.HandleFunc("/", handler.DefaultHandler)
+	router.HandleFunc(utils.REGISTRATION_PATH, h.RegistrationHandler)
 
 	// Configure the HTTP server with the network address and
 	// the router wrapped in logging middleware.
