@@ -7,64 +7,92 @@
 
 
 
+# README
 
+**More coming soon...**
 
-### Authentication
+---
 
-#### Why authenticate?
-You should authenticate to get your own api key.
-You will need an api key to access this service.
+## Authentication
 
-You dont need you own api key to check the status of upstream apis or to register a new user.
-You can register as manny keys as you want, eaven with the same email!
+### Why authenticate?
+You should authenticate to get your own API key.  
+You will need an API key to access this service.
 
-#### Getting authenticated
-Simply **POST** your name and epost in a json format to **/auth/** 
+You do **not** need your own API key to:
+- Check the status of upstream APIs  
+- Register a new user  
 
-example : 
->**POST** xxxxx:8080/auth/   
->{                        
->    "name" : "Alice",   
->   "email" : "alice@mail.com"  
->}                
+You can register as many keys as you want, even with the same email.
 
-Your email needs @ to be registered as a mail!
+---
 
+### Getting authenticated
+Simply **POST** your name and email in JSON format to `/auth/`.
 
-You will then recive an api key:
->{  
->"key" :            "sk-envdash-fakeAPIkey...",  
->"createdAt" : "20260317 20:32"  
->}  
+Example:
+POST xxxxx:8080/auth/
+{
+  "name": "Alice",
+  "email": "alice@mail.com"
+}
 
-key is your api own key!
-createdAt is when the api key were created
+Your email must contain `@` to be accepted.
 
-#### Using your api key
-You must include you api key in all requests to this service.
-This way the server knows it is you asking for information and you do not have to log inn every time!
+You will then receive an API key:
 
-**more info about using api keys on the way**
+{
+  "key": "sk-envdash-fakeAPIkey...",
+  "createdAt": "20260317 20:32"
+}
 
-#### Deleting your api key
-Simply **DELETE** your api key with : **/auth/{apikey}**
-{apikey} is your own api key that you want to delete
+- key: Your personal API key  
+- createdAt: When the API key was created  
 
-example:
->**DELETE** xxxxx:8080/auth/sk-envdash-fakeAPIkey...
+---
 
-you dont need to include anny api key to delete you api keys!
+### Using your API key
+You must include your API key in all requests to this service.  
+This allows the server to identify you without requiring login each time.
 
-You receive on successfully deleated api key:
->No content fount 204
+More info about using API keys is coming soon.
 
-If you reseave anny other status code then the api key were not deleated!
+---
 
-##### Dependencies
-To store api keys we are dependent on Firebase being up. Firebase is used to store the keys in a secure way. This means that if the **/status** handler returns annything other than 200 on the Firebase collum, then api keys cant be authenticated.
+### Deleting your API key
+Simply **DELETE** your API key using:
+/auth/{apikey}
 
-##### How the sever creates API keys + security
-API keys for users are made from a hash of the registerd email and the time the api is being created.
-This ensures that duplicate api keys are very hard to be duplicated and users can create a lot of keys!
+Replace {apikey} with your actual API key.
 
-Also as an additional layer of security against duplications the time since the server were set up is also a part of the hash. That makes guessing or bruteforcing someone elses api key a lot harder since you would need to know the email, the exact time (.0000001 sec), and for how long the server has been up.
+Example:
+DELETE xxxxx:8080/auth/sk-envdash-fakeAPIkey...
+
+You do **not** need to include an API key in the request to delete one.
+
+If successful, you will receive:
+204 No Content
+
+If you receive any other status code, the API key was not deleted.
+
+---
+
+### Dependencies
+API key storage depends on Firebase. Firebase is used to securely store keys.
+
+If the `/status` endpoint returns anything other than 200 for the Firebase column, API authentication will not work.
+
+---
+
+### How the server creates API keys (Security)
+API keys are generated using a hash of:
+- The registered email  
+- The exact time the key is created  
+
+This makes duplicate keys extremely unlikely and allows users to create multiple keys safely.
+
+As an additional security layer, the server uptime is also included in the hash.  
+This makes brute-forcing or guessing API keys significantly harder, since an attacker would need:
+- The email  
+- The exact timestamp (down to fractions of a second)  
+- The server uptime  
