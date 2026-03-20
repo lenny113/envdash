@@ -1,7 +1,7 @@
 package store
 
 import (
-	model "assignment-2/utils/models"
+	model "assignment-2/internal/models"
 	"context"
 
 	"cloud.google.com/go/firestore"

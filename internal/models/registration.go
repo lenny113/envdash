@@ -1,4 +1,4 @@
-package utils
+package models
 
 // Definition of a registration
 type Registration struct {

@@ -2,30 +2,26 @@ package main
 
 import (
 	handler "assignment-2/internal/handlers"
-	"assignment-2/internal/store"
-	utils "assignment-2/utils"
-	"context"
+	utils "assignment-2/internal/utils"
 	"log"
 	"net/http"
 	"os"
-
-	"cloud.google.com/go/firestore"
-	"google.golang.org/api/option"
 )
 
 func main() {
 
-	ctx := context.Background()
-	//client, err := firestore.NewClient(ctx, "<PROJECT_ID>", ADD PROJECT ID HERTE
-	//	option.WithCredentialsFile(<CREDENTIALS_FILE>)) ADD CREDENTIALS FILE HERE
-	if err != nil {
-		log.Fatal("Failed to initialize Firestore:", err)
-	}
-	defer client.Close()
+	/*
+		ctx := context.Background()
+		//client, err := firestore.NewClient(ctx, "<PROJECT_ID>", ADD PROJECT ID HERTE
+		//	option.WithCredentialsFile(<CREDENTIALS_FILE>)) ADD CREDENTIALS FILE HERE
+		if err != nil {
+			log.Fatal("Failed to initialize Firestore:", err)
+		}
+		defer client.Close()
 
-	st := store.NewFirestoreStore(client)
-	h := handler.NewHandler(st)
-
+		st := store.NewFirestoreStore(client)
+		h := handler.NewHandler(st)
+	*/
 	// Extract PORT variable from the OS environment variables
 	port := os.Getenv("PORT")
 
@@ -42,7 +38,7 @@ func main() {
 	router := http.NewServeMux()
 
 	router.HandleFunc("/", handler.DefaultHandler)
-	router.HandleFunc(utils.REGISTRATION_PATH, h.RegistrationHandler)
+	//router.HandleFunc(utils.REGISTRATION_PATH, h.RegistrationHandler)
 
 	// Configure the HTTP server with the network address and
 	// the router wrapped in logging middleware.

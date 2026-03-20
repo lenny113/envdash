@@ -1,8 +1,8 @@
 package handlers
 
 import (
-	"assignment-2/utils"
-	model "assignment-2/utils/models"
+	model "assignment-2/internal/models"
+	"assignment-2/internal/utils"
 	"encoding/json"
 	"errors"
 	"net/http"

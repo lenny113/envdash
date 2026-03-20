@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"assignment-2/utils"
+	"assignment-2/internal/utils"
 	"net/http"
 )
 
