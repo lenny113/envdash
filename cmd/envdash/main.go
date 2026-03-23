@@ -1,6 +1,7 @@
 package main
 
 import (
+	"assignment-2/internal/client"
 	handler "assignment-2/internal/handlers"
 	utils "assignment-2/internal/utils"
 	"log"
@@ -20,8 +21,12 @@ func main() {
 		defer client.Close()
 
 		st := store.NewFirestoreStore(client)
-		h := handler.NewHandler(st)
 	*/
+
+	restCountriesHTTPClient := utils.NewHttpClient()
+	restCountriesClient := client.NewRestCountriesClient(restCountriesHTTPClient)
+	h := handler.NewHandler(nil, restCountriesClient)
+
 	// Extract PORT variable from the OS environment variables
 	port := os.Getenv("PORT")
 
@@ -38,7 +43,7 @@ func main() {
 	router := http.NewServeMux()
 
 	router.HandleFunc("/", handler.DefaultHandler)
-	//router.HandleFunc(utils.REGISTRATION_PATH, h.RegistrationHandler)
+	router.HandleFunc(utils.REGISTRATION_PATH, h.RegistrationHandler)
 
 	// Configure the HTTP server with the network address and
 	// the router wrapped in logging middleware.
