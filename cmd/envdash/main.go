@@ -39,7 +39,7 @@ func main() {
 
 	router.HandleFunc("/", handler.DefaultHandler)
 	//router.HandleFunc(utils.REGISTRATION_PATH, h.RegistrationHandler)
-
+	router.HandleFunc(utils.AUTHENTICATION_PATH, handler.RegisterAuth)
 	// Configure the HTTP server with the network address and
 	// the router wrapped in logging middleware.
 	server := http.Server{
