@@ -2,9 +2,9 @@ package store
 
 import (
 	model "assignment-2/internal/models"
-	"context"
-
 	"cloud.google.com/go/firestore"
+	"context"
+	"fmt"
 	"google.golang.org/api/iterator"
 )
 
@@ -29,6 +29,18 @@ func (f *Store) CreateRegistration(ctx context.Context, reg model.Registration) 
 
 	return doc.ID, nil
 }
+
+/*
+Checks if api key exists
+Takes unhashed api key, checks database if this should be given access.
+This will be used when authenticating incomming api requests, if it exists returns true
+
+This method is part of the Store struct, which holds the Firestore client.
+
+@param ctx 		-keeping track of firestore connection(timeout etc)
+@apiKey			-the key you want to check
+@return bool	-if api key exists:true, if not in Firestore:false
+*/
 func (f *Store) ApiKeyExists(ctx context.Context, apiKey string) bool {
 
 	_, err := f.client.
@@ -38,26 +50,46 @@ func (f *Store) ApiKeyExists(ctx context.Context, apiKey string) bool {
 
 	if err != nil {
 		//api key cant be found e.g it is unique
-		fmt.Println("Api key cant be found")
 		return false
 	}
 
-	fmt.Println("found api key")
+	//This api key exists!
 	return true
 }
 
+/*
+Storess API
+Apis are currently stored in two different ways:
+
+	1: All apis stored in one collection ass documents
+			-Data stored: "time of creation" and what email used
+	2: All users (email, addresses) have nested collection storing each api key
+		These are the same api keys, stored in different ways
+		This is donne for effecient lookup (if we letssay have 1 million users this would still work)
+			-Data stored: "time of creation" and "name of api key"
+
+This method is part of the Store struct, which holds the Firestore client.
+
+@param ctx 		- keeping track of firestore connection(timeout etc)
+@param reg 		- struct of all data that we want to store
+@return error 	- if anny errors cam when storing api key in firestore, if nil, the keys were stored!
+*/
 func (f *Store) CreateApiStorage(ctx context.Context, reg model.Authentication) error {
 	//setts api
 	AllApi := f.client.Collection("all_api_keys").Doc(reg.ApiKeyHash)
 	_, err := AllApi.Set(ctx, map[string]interface{}{
-		"createdAt": reg.CreatedAt,
+		"time of creation": reg.CreatedAt,
+		"user":             reg.Email,
 	})
 
 	emailDoc := f.client.Collection("authentication_info").Doc(reg.Email)
 	//creating nested api key structure
-	apiDoc := emailDoc.Collection("api_keys").Doc(reg.ApiKeyHash)
+	EmailApiDoc := emailDoc.Collection("api_keys").Doc(reg.ApiKeyHash)
 
-	_, err = apiDoc.Set(ctx, reg)
+	_, err = EmailApiDoc.Set(ctx, map[string]interface{}{
+		"time of creation": reg.CreatedAt,
+		"name of api key":  reg.Name,
+	})
 	if err != nil {
 		return err
 	}
@@ -65,6 +97,18 @@ func (f *Store) CreateApiStorage(ctx context.Context, reg model.Authentication) 
 	return nil
 }
 
+/*
+Counts how manny Api's the speccified user have (checks Firestore)
+and return the number of Apis's and anny errors if appropirate
+If error, return 0 apis registerd to this user.
+
+This method is part of the Store struct, which holds the Firestore client.
+
+@param ctx	-keeping track of firestore connection(timeout etc)
+@param email-The email you want to check, email is the user all apis are registerd under
+@return int	-Return if anny, how manny Api's this user have registerd in Firestore, 0 if error
+return error-Returns anny error and dont complete the function
+*/
 func (h *Store) CountApiPerUser(ctx context.Context, email string) (int, error) {
 	//getting info about spesific email
 	EmailDoc := h.client.Collection("authentication_info").Doc(email)
@@ -79,8 +123,22 @@ func (h *Store) CountApiPerUser(ctx context.Context, email string) (int, error) 
 	return len(doc), nil
 }
 
-// TODO write doxygen commenting
-func (f *Store) DeleteAPIkey(ctx context.Context, id string) error {
+/*
+Deletes Api stored in Firestore. Deletes both places where Api is stored (global storage and per user)
+First extract what email(user) this is api is registerd to, then delete in global storage (All_api_Keys)
+Then delete this exact api from user.
+
+This function don't delete user from database if this is the last api. This is because we
+want to keep our user stored. We may want to enhance the functionality, and want to link maybe some other
+information about this user
+
+This method is part of the Store struct, which holds the Firestore client.
+
+@param ctx		-keeping track of firestore connection(timeout etc)
+@param apiKey	-api key from the user
+@return error	-returns error if something goes wrong, example: wrong format stored in Firestore
+*/
+func (f *Store) DeleteAPIkey(ctx context.Context, apiKey string) error {
 	docRef := f.client.Collection("all_api_keys").Doc(id)
 
 	// check if exists
