@@ -4,6 +4,8 @@ import (
 	model "assignment-2/internal/models"
 	"cloud.google.com/go/firestore"
 	"context"
+	"crypto/sha256" //hash api key for database
+	"encoding/hex"  //for converting hash to string
 	"fmt"
 	"google.golang.org/api/iterator"
 )
@@ -31,21 +33,25 @@ func (f *Store) CreateRegistration(ctx context.Context, reg model.Registration) 
 }
 
 /*
+You may want to use this function to check is API key gives acces.
+
 Checks if api key exists
-Takes unhashed api key, checks database if this should be given access.
+Takes api key, hashes it, checks database if it exists.
 This will be used when authenticating incomming api requests, if it exists returns true
 
 This method is part of the Store struct, which holds the Firestore client.
+
+@see			-hashAPIKey() for hashing implementation
 
 @param ctx 		-keeping track of firestore connection(timeout etc)
 @apiKey			-the key you want to check
 @return bool	-if api key exists:true, if not in Firestore:false
 */
 func (f *Store) ApiKeyExists(ctx context.Context, apiKey string) bool {
-
+	hashedApiKey := hashAPIKey(apiKey)
 	_, err := f.client.
 		Collection("all_api_keys").
-		Doc(apiKey).
+		Doc(hashedApiKey).
 		Get(ctx)
 
 	if err != nil {
@@ -68,15 +74,21 @@ Apis are currently stored in two different ways:
 		This is donne for effecient lookup (if we letssay have 1 million users this would still work)
 			-Data stored: "time of creation" and "name of api key"
 
+This function hashes api key so no clairtext api key is stored on server
+
 This method is part of the Store struct, which holds the Firestore client.
 
+@see			-hashAPIKey() for hashing implementation
+
 @param ctx 		- keeping track of firestore connection(timeout etc)
-@param reg 		- struct of all data that we want to store
+@param reg 		- struct of all data that we want to store (api key gets hashed)
 @return error 	- if anny errors cam when storing api key in firestore, if nil, the keys were stored!
 */
 func (f *Store) CreateApiStorage(ctx context.Context, reg model.Authentication) error {
+	//first hashes api key generated:
+	hashedApiKey := hashAPIKey(reg.ApiKey)
 	//setts api
-	AllApi := f.client.Collection("all_api_keys").Doc(reg.ApiKeyHash)
+	AllApi := f.client.Collection("all_api_keys").Doc(hashedApiKey)
 	_, err := AllApi.Set(ctx, map[string]interface{}{
 		"time of creation": reg.CreatedAt,
 		"user":             reg.Email,
@@ -84,7 +96,7 @@ func (f *Store) CreateApiStorage(ctx context.Context, reg model.Authentication) 
 
 	emailDoc := f.client.Collection("authentication_info").Doc(reg.Email)
 	//creating nested api key structure
-	EmailApiDoc := emailDoc.Collection("api_keys").Doc(reg.ApiKeyHash)
+	EmailApiDoc := emailDoc.Collection("api_keys").Doc(hashedApiKey)
 
 	_, err = EmailApiDoc.Set(ctx, map[string]interface{}{
 		"time of creation": reg.CreatedAt,
@@ -134,12 +146,15 @@ information about this user
 
 This method is part of the Store struct, which holds the Firestore client.
 
+@see			-hashAPIKey() for hashing implementation
+
 @param ctx		-keeping track of firestore connection(timeout etc)
 @param apiKey	-api key from the user
 @return error	-returns error if something goes wrong, example: wrong format stored in Firestore
 */
 func (f *Store) DeleteAPIkey(ctx context.Context, apiKey string) error {
-	docRef := f.client.Collection("all_api_keys").Doc(id)
+	apiKeyHashed := hashAPIKey(apiKey)
+	docRef := f.client.Collection("all_api_keys").Doc(apiKeyHashed)
 
 	// check if exists
 	docSnap, err := docRef.Get(ctx)
@@ -165,7 +180,7 @@ func (f *Store) DeleteAPIkey(ctx context.Context, apiKey string) error {
 	//now goes to right user, and deletes that API key:
 	userDoc := f.client.Collection("authentication_info").Doc(userMail)
 
-	nestedDocRef := userDoc.Collection("api_keys").Doc(id)
+	nestedDocRef := userDoc.Collection("api_keys").Doc(apiKeyHashed)
 
 	_, err = nestedDocRef.Delete(ctx)
 	if err != nil {
@@ -173,6 +188,21 @@ func (f *Store) DeleteAPIkey(ctx context.Context, apiKey string) error {
 	}
 
 	return nil
+}
+
+/*
+Hashes API key
+This is done BEFORE being stored in database
+Use this function when checking api key in database, since all are hashed
+Uses sha 256 hash. Stores as string.
+
+@param apiKeyUnhashed	-String (api key) you want hashed
+@return string			-Returns sha 256 hashed string
+*/
+func hashAPIKey(apiKeyUnhashed string) string {
+	apiKeyHashed := sha256.Sum256([]byte(apiKeyUnhashed))
+	apiKeyHashedString := hex.EncodeToString(apiKeyHashed[:])
+	return apiKeyHashedString
 }
 
 func (f *Store) GetRegistration(ctx context.Context, id string) (*model.Registration, error) {

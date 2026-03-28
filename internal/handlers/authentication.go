@@ -4,9 +4,8 @@ import (
 	model "assignment-2/internal/models"
 	"assignment-2/internal/utils"
 	//"assignment-2/internal/store"
-	"crypto/md5"    //for generarting hash to create api key
-	"crypto/sha256" //to store a hashed version of api key in database
-	"encoding/hex"  //for converting md5 hash to string
+	"crypto/md5"   //for generarting hash to create api key
+	"encoding/hex" //for converting md5 hash to string
 	"encoding/json"
 	"fmt" //for writing output and testing
 	"net/http"
@@ -110,14 +109,11 @@ func (h *Handler) RegisterAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//Stores hashed api in Firestore
-	hashedApiraw := sha256.Sum256([]byte(createAPI))
-	hashedApiString := hex.EncodeToString(hashedApiraw[:])
 	reg := model.Authentication{
-		Name:       login.Name,
-		Email:      login.Email,
-		ApiKeyHash: hashedApiString,
-		CreatedAt:  timeCreateApi,
+		Name:      login.Name,
+		Email:     login.Email,
+		ApiKey:    keyResponse.ApiKey,
+		CreatedAt: timeCreateApi,
 	}
 	err = h.store.CreateApiStorage(ctx, reg)
 	if err != nil {
@@ -180,15 +176,14 @@ func (h *Handler) DeleteAuth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	API := r.PathValue("id")
-	APIHashed := hashAPIKey(API)
 	//Checks if api key exists
-	if !h.store.ApiKeyExists(ctx, APIHashed) {
+	if !h.store.ApiKeyExists(ctx, API) {
 		http.Error(w, "could not find API key", http.StatusNotFound)
 		return
 	}
 
 	//we have to delete this key in firestore
-	err := h.store.DeleteAPIkey(ctx, APIHashed)
+	err := h.store.DeleteAPIkey(ctx, API)
 	if err != nil {
 		http.Error(w, "something went wrong in Firestore, while trying to delete apikey", http.StatusInternalServerError)
 		return
@@ -197,11 +192,4 @@ func (h *Handler) DeleteAuth(w http.ResponseWriter, r *http.Request) {
 	//if it goes through, it works
 	w.WriteHeader(http.StatusNoContent)
 
-}
-
-// used for hashing the api key to the database (firestore only have hashed api keys)
-func hashAPIKey(apiKeyUnhashed string) string {
-	apiKeyHashed := sha256.Sum256([]byte(apiKeyUnhashed))
-	apiKeyHashedString := hex.EncodeToString(apiKeyHashed[:])
-	return apiKeyHashedString
 }
