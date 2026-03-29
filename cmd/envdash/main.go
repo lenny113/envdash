@@ -37,10 +37,11 @@ func main() {
 
 		st := store.NewFirestoreStore(client)
 	*/
-
-	restCountriesHTTPClient := utils.NewHttpClient()
-	restCountriesClient := client.NewRestCountriesClient(restCountriesHTTPClient)
-	h := handler.NewHandler(nil, restCountriesClient)
+	/*
+		restCountriesHTTPClient := utils.NewHttpClient()
+		restCountriesClient := client.NewRestCountriesClient(restCountriesHTTPClient)
+		h := handler.NewHandler(nil, restCountriesClient)
+	*/
 
 	// Extract PORT variable from the OS environment variables
 	port := os.Getenv("PORT")
