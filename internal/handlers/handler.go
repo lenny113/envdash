@@ -14,12 +14,12 @@ type Handler struct {
 }
 
 /*
-	func NewHandler(s *store.Store, restCountriesClient client.RestCountriesClient) *Handler {
-		return &Handler{
-			store:               s,
-			restCountriesClient: restCountriesClient,
-		}
+func NewHandler(s *store.Store, restCountriesClient client.RestCountriesClient) *Handler {
+	return &Handler{
+		store:               s,
+		restCountriesClient: restCountriesClient,
 	}
+}
 */
 func NewHandler(s *store.Store) *Handler {
 	return &Handler{store: s}
