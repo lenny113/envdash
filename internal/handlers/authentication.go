@@ -1,12 +1,16 @@
 package handlers
 
 import (
+	model "assignment-2/internal/models"
+	"assignment-2/internal/utils"
+	//"assignment-2/internal/store"
 	"crypto/md5"   //for generarting hash to create api key
 	"encoding/hex" //for converting md5 hash to string
 	"encoding/json"
-	"fmt"
+	"fmt" //for writing output and testing
 	"net/http"
-	"time" //time of creating api key and for generating unique api key based partly on time hash
+	"net/mail" //for email check (private emails also accepted)
+	"time"     //time of creating api key and for generating unique api key based partly on time hash
 )
 
 type Login struct {
@@ -14,8 +18,8 @@ type Login struct {
 	Email string `json:"email"`
 }
 
-type key struct {
-	Key       string `json:"key"`
+type Key struct {
+	ApiKey    string `json:"key"`
 	CreatedAt string `json:"createdAt"`
 }
 
@@ -32,7 +36,10 @@ If the API key is unique, it encodes the key struct to JSON and sends it back to
 @see createAPIKey - the function responsible for generating a unique API key for the user
 @see isAPIKeyUsed - the function responsible for checking if the generated API key is already in use and not empty or incomplete
 */
-func RegisterAuth(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) RegisterAuth(w http.ResponseWriter, r *http.Request) {
+	//used in handling connection to Firestore
+	ctx := r.Context()
+
 	if r.Method != http.MethodPost { //if not a POST request, return method not allowed
 		http.Error(w, "Only POST method allowed", http.StatusMethodNotAllowed)
 		return
@@ -54,16 +61,20 @@ func RegisterAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//check if email contains @, if not, return bad request
-	isAtValid := false
-	for i := 0; i < len(login.Email); i++ {
-		if login.Email[i] == '@' {
-			isAtValid = true
-			break
-		}
+	//check if email is correctly formated (RFC 5322), if not, return bad request
+	if !isValidEmail(login.Email) {
+		http.Error(w, "Invalid email format", http.StatusBadRequest)
+		return
 	}
-	if !isAtValid {
-		http.Error(w, "Invalid email format, no @ found", http.StatusBadRequest)
+
+	//getting how manny api keys the user alreaddy have to confirm is they can make more
+	howMannyApiKeys, err := h.store.CountApiPerUser(ctx, login.Email)
+	if err != nil {
+		http.Error(w, "fault reaching Firestore", http.StatusInternalServerError)
+		return
+	}
+	if (howMannyApiKeys) > utils.MAXAPIKEYS-1 {
+		http.Error(w, "To manny api keys registerd to this user, try deleting one", http.StatusTooManyRequests)
 		return
 	}
 
@@ -74,7 +85,7 @@ func RegisterAuth(w http.ResponseWriter, r *http.Request) {
 	maxTestAttempts := 10
 	for i := 0; i < maxTestAttempts; i++ {
 		createAPI, timeCreateApi = createAPIKey(login.Email)
-		if !isAPIKeyUsed(createAPI) {
+		if !h.store.ApiKeyExists(ctx, createAPI) {
 			break
 		}
 		//this would only be in the senario where some number breakes the md5 hash or full storage in database
@@ -87,18 +98,28 @@ func RegisterAuth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//formatting the response to the user, which includes the generated API key and the time of API creation
-	key := key{
-		Key:       createAPI,
+	keyResponse := Key{
+		ApiKey:    createAPI,
 		CreatedAt: timeCreateApi,
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	if err := json.NewEncoder(w).Encode(key); err != nil {
+	if err := json.NewEncoder(w).Encode(keyResponse); err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 		return
 	}
-	fmt.Println("API key generated and sent to user")
 
+	reg := model.Authentication{
+		Name:      login.Name,
+		Email:     login.Email,
+		ApiKey:    keyResponse.ApiKey,
+		CreatedAt: timeCreateApi,
+	}
+	err = h.store.CreateApiStorage(ctx, reg)
+	if err != nil {
+		http.Error(w, "Failed to save api keys in Firestore", http.StatusInternalServerError)
+		return
+	}
 }
 
 /*
@@ -133,40 +154,42 @@ func createAPIKey(email string) (string, string) {
 }
 
 /*
-@brief This function is used to check if the generated API key is already in use.
-
-If true: the API key is already in use, and a new one should be generated.
-If false: the API key is not in use, and can be used for the user.
-
-This is done by comparing the generated API key to keys on the database.
-Furhermore, this function also checks if the generated API key is empty or incomplete, which is a sign of unsuccessful generation process.
-
-@param key - the API key to check
-@return bool - true if the API key is already in use or incomplete, false otherwise
+Checks if the email provided is valid, if so return true
 */
-func isAPIKeyUsed(key string) bool {
-	//check if api key is already in use, if so, generate a new one (this is very unlikely, but we want to be sure)
-	usedAPIKey := "sk-envdash-4597dc2d89e56c8e0cde3d3b9f42bdfa" // TODO: change this with firestore after we have finished the firestore handler
+func isValidEmail(email string) bool {
+	address, err := mail.ParseAddress(email)
 
-	//here we want to check if the generated API key were made or not, if no api key were made, send true
-	if key == "" {
-		//Logging not implemented, but needs to be logged because this should not happen
-		//log.Println("Generated API key is empty")
-		return true
-	}
-	//if only the start of the API key is generated, send true, because this means that the random string part is not generated yet, and this is not a valid API key
-	if key == "sk-envdash-" {
-		//logging waiting for implementation
-		//log.Println("Generated API key is incomplete")
-		return true
+	if err != nil {
+		return false
 	}
 
-	//when firebase is added this will be where api key is looking for duplicates
-	if key == usedAPIKey {
-		//logging waiting for implementation
-		//log.Println("Generated API key is already in use")
-		return true
+	return address != nil
+}
+
+func (h *Handler) DeleteAuth(w http.ResponseWriter, r *http.Request) {
+	//used in handling connection to Firestore
+	ctx := r.Context()
+
+	if r.Method != http.MethodDelete { //if not a DELETE request, return method not allowed
+		http.Error(w, "Only POST method allowed", http.StatusMethodNotAllowed)
+		return
 	}
-	return false
+
+	API := r.PathValue("id")
+	//Checks if api key exists
+	if !h.store.ApiKeyExists(ctx, API) {
+		http.Error(w, "could not find API key", http.StatusNotFound)
+		return
+	}
+
+	//we have to delete this key in firestore
+	err := h.store.DeleteAPIkey(ctx, API)
+	if err != nil {
+		http.Error(w, "something went wrong in Firestore, while trying to delete apikey", http.StatusInternalServerError)
+		return
+	}
+
+	//if it goes through, it works
+	w.WriteHeader(http.StatusNoContent)
 
 }
