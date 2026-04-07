@@ -17,15 +17,22 @@ import (
 func main() {
 
 	ctx := context.Background()
+
+	credFile := os.Getenv("FIREBASE_CREDENTIALS_FILE")
+
+	if !fileExists(credFile) {
+		log.Panic("Firebase credentials file not found or not mounted")
+	}
+
 	client, err := firestore.NewClient(ctx, "cachemea2",
-		option.WithCredentialsFile("../../../firestore_auth.json"),
+		option.WithCredentialsFile(credFile),
 	)
 	if err != nil {
 		log.Fatal("Failed to initialize Firestore:", err)
 	}
 	defer client.Close()
 	st := store.NewFirestoreStore(client)
-	h := handler.NewHandler(st)
+	h := handler.NewFirestoreHandler(st)
 	/*
 		ctx := context.Background()
 		//client, err := firestore.NewClient(ctx, "<PROJECT_ID>", ADD PROJECT ID HERTE
@@ -38,9 +45,9 @@ func main() {
 		st := store.NewFirestoreStore(client)
 	*/
 	/*
-	restCountriesHTTPClient := utils.NewHttpClient()
-	restCountriesClient := client.NewRestCountriesClient(restCountriesHTTPClient)
-	h := handler.NewHandler(nil, restCountriesClient)
+		restCountriesHTTPClient := utils.NewHttpClient()
+		restCountriesClient := client.NewRestCountriesClient(restCountriesHTTPClient)
+		h := handler.NewHandler(nil, restCountriesClient)
 	*/
 
 	// Extract PORT variable from the OS environment variables
@@ -74,4 +81,13 @@ func main() {
 	//Starting server
 	log.Println("Starting server on port " + port)
 	log.Fatal(server.ListenAndServe(), "Error starting server")
+}
+
+// fileExists checks if a file exists and is not a directory.
+func fileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
 }
