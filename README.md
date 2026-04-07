@@ -1,7 +1,7 @@
 # README
 
 
-** More comming soon .. **
+** More coming soon .. **
 
 
 
