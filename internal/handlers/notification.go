@@ -26,7 +26,7 @@ func (h *Handler) NotificationSpinnerById(w http.ResponseWriter, r *http.Request
 	case "GET":
 		h.specificNotification(w, r)
 	case "DELETE":
-		fmt.Println("METHOD DELETE")
+		h.deleteNotification(w, r)
 	default:
 		http.Error(w, "method is not ok", http.StatusMethodNotAllowed)
 	}
@@ -177,4 +177,23 @@ func (h *Handler) specificNotification(w http.ResponseWriter, r *http.Request) {
 
 	//send the response back to the client
 	w.Write(responseJSON)
+}
+
+func (h *Handler) deleteNotification(w http.ResponseWriter, r *http.Request) {
+	//get id from url path
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "Missing id in URL path", http.StatusBadRequest)
+		return
+	}
+	err := h.store.DeleteNotification(r.Context(), id)
+	if err != nil {
+		//if not found, return 404 error
+		http.Error(w, "Notification not found", http.StatusNotFound)
+		return
+	}
+	//if deleted successfully, return a success message
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusNoContent)
+	w.Write([]byte("Notification with id " + id + " successfully deleted"))
 }

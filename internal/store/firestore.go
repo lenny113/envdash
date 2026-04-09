@@ -354,3 +354,18 @@ func (f *Store) GetAllNotifications(ctx context.Context) ([]model.AllRegisteredW
 
 	return result, nil
 }
+
+func (f *Store) DeleteNotification(ctx context.Context, id string) error {
+
+	docRef := f.client.Collection("notifications").Doc(id)
+	// check if exists
+	_, err := docRef.Get(ctx)
+	if err != nil {
+		//there is no notification with this id, return error
+		return err
+	}
+	//delete notification with this id
+	_, err = docRef.Delete(ctx)
+	return err
+
+}
