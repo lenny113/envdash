@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time" //for generating time of creation of notification
 )
 
 func (h *Handler) NotificationSpinner(w http.ResponseWriter, r *http.Request) {
@@ -33,7 +34,6 @@ func (h *Handler) NotificationSpinnerById(w http.ResponseWriter, r *http.Request
 }
 
 func (h *Handler) postRequest(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("METHOD POST")
 
 	if r.Body == nil {
 		http.Error(w, "Please send a request body", http.StatusBadRequest)
@@ -58,16 +58,33 @@ func (h *Handler) postRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Stores in Firestore
-	err = h.store.CreateNotification(r.Context(), request)
+	notificationId, err := h.store.CreateNotification(r.Context(), request)
 	if err != nil {
 		utils.SetMessageForLogger(w, "Error creating notification in Firestore")
 		http.Error(w, "Error creating notification", http.StatusInternalServerError)
 		return
 	}
+	//time created
+	timeCreated := time.Now().Format("20060102 15:04")
 
-	//Prints the received notification to the console for testing purposes
-	fmt.Printf("URL: %s, Country: %s, Event: %s\n",
-		request.Url, request.Country, request.Event)
+	//After successful creation of notification, it returns a success message:
+	var response models.RegisteredWebhookResponse
+	response.Id = notificationId
+	response.Country = request.Country
+	response.Event = request.Event
+	response.Time = timeCreated
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+
+	responseJSON, err := json.MarshalIndent(response, "", "   ")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(responseJSON)
+
 }
 
 func validateNotification(request models.RegisterWebhook) (error, string) {

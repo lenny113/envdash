@@ -5,3 +5,10 @@ type RegisterWebhook struct {
 	Country string `json:"country"`
 	Event   string `json:"event"`
 }
+
+type RegisteredWebhookResponse struct {
+	Id      string `json:"id"`
+	Country string `json:"country"`
+	Event   string `json:"event"`
+	Time    string `json:"time"`
+}

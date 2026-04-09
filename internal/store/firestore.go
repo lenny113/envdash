@@ -74,7 +74,7 @@ Apis are currently stored in two different ways:
 		This is donne for effecient lookup (if we letssay have 1 million users this would still work)
 			-Data stored: "time of creation" and "name of api key"
 
-This function hashes api key so no clairtext api key is stored on server
+# This function hashes api key so no clairtext api key is stored on server
 
 This method is part of the Store struct, which holds the Firestore client.
 
@@ -292,14 +292,15 @@ func (f *Store) DeleteRegistration(ctx context.Context, id string) error {
 //****************************************************************************************************************//
 
 // stores notification in Firestore, this is used when a user register a webhook, and we want to store this in database
-func (f *Store) CreateNotification(ctx context.Context, notification model.RegisterWebhook) error {
+func (f *Store) CreateNotification(ctx context.Context, notification model.RegisterWebhook) (string, error) {
 	//sotres in "notifications" collection, each document is a notification, with all data about this notification stored in the document
-	_, err := f.client.Collection("notifications").NewDoc().Set(ctx, notification)
+	docRef := f.client.Collection("notifications").NewDoc()
+	_, err := docRef.Set(ctx, notification)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	//TODO: Add also under authentication_info, so we can easily find all notifications for a specific user
 
-	return nil
+	return docRef.ID, nil
 }
