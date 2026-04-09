@@ -304,6 +304,28 @@ func (f *Store) CreateNotification(ctx context.Context, notification model.Regis
 
 	return docRef.ID, nil
 }
+
+func (f *Store) GetSpecificNotification(ctx context.Context, id string) (model.AllRegisteredWebhook, error) {
+
+	doc, err := f.client.Collection("notifications").Doc(id).Get(ctx)
+	if err != nil {
+		//there is no notification with this id, return error
+		return model.AllRegisteredWebhook{}, err
+	}
+
+	//if found, convert to struct and return
+	var notification model.RegisterWebhook
+	if err := doc.DataTo(&notification); err != nil {
+		return model.AllRegisteredWebhook{}, err
+	}
+
+	return model.AllRegisteredWebhook{
+		Id:              doc.Ref.ID,
+		RegisterWebhook: notification,
+	}, nil
+
+}
+
 func (f *Store) GetAllNotifications(ctx context.Context) ([]model.AllRegisteredWebhook, error) {
 	iter := f.client.Collection("notifications").Documents(ctx)
 	defer iter.Stop()

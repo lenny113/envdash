@@ -15,7 +15,7 @@ func (h *Handler) NotificationSpinner(w http.ResponseWriter, r *http.Request) {
 	case "POST":
 		h.postRequest(w, r)
 	case "GET":
-		h.AllNotifications(w, r)
+		h.allNotifications(w, r)
 	default:
 		http.Error(w, "method is not ok", http.StatusMethodNotAllowed)
 	}
@@ -24,7 +24,7 @@ func (h *Handler) NotificationSpinner(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) NotificationSpinnerById(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		fmt.Println("METHOD GET")
+		h.specificNotification(w, r)
 	case "DELETE":
 		fmt.Println("METHOD DELETE")
 	default:
@@ -133,7 +133,7 @@ func validateNotification(request models.RegisterWebhook) (error, string) {
 
 }
 
-func (h *Handler) AllNotifications(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) allNotifications(w http.ResponseWriter, r *http.Request) {
 	AllSaved, err := h.store.GetAllNotifications(r.Context())
 	if err != nil {
 		http.Error(w, "Error fetching notifications", http.StatusInternalServerError)
@@ -148,4 +148,33 @@ func (h *Handler) AllNotifications(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Write(responseJSON)
 
+}
+
+func (h *Handler) specificNotification(w http.ResponseWriter, r *http.Request) {
+	//get id from url path
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "Missing id in URL path", http.StatusBadRequest)
+		return
+	}
+
+	notification, err := h.store.GetSpecificNotification(r.Context(), id)
+	if err != nil {
+		//if not found, return 404 error
+		http.Error(w, "Notification not found", http.StatusNotFound)
+		return
+	}
+
+	//if found, return the notification as json
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	responseJSON, err := json.MarshalIndent(notification, "", "   ")
+	if err != nil {
+		//if there is an error marshaling the response, return 500 error
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	//send the response back to the client
+	w.Write(responseJSON)
 }
