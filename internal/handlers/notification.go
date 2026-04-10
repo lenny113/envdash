@@ -3,6 +3,7 @@ package handlers
 import (
 	"assignment-2/internal/models"
 	"assignment-2/internal/utils"
+	"bytes" //for sending the payload in the POST request to the webhook URL
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -248,5 +249,53 @@ func validateThreashold(thresholdStruct models.ThresholdNotification) (error, st
 		return fmt.Errorf("validation failed"), strings.Join(errors, ", ")
 	}
 	return nil, ""
+
+}
+
+func sendingWebhook(key string, notification models.RegisterWebhook) {
+
+	//POST METHOD
+	//Containting key,country, event, time
+	//If threashold:field, operator,threshold value, and registerd value
+
+	payload := map[string]interface{}{
+		"id":      key,
+		"country": notification.Country,
+		"event":   notification.Event,
+		"time":    time.Now().Format("20060102 15:04"),
+	}
+	if notification.ThresholdNotification != nil {
+		payload["threshold"] = map[string]interface{}{
+			"field":    notification.ThresholdNotification.Field,
+			"operator": notification.ThresholdNotification.Operator,
+			"value":    notification.ThresholdNotification.Value,
+		}
+	}
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		//fmt.Errorf("Error marshaling webhook payload", err)
+		return
+	}
+
+	//send the POST request to the webhook URL
+	request, err := http.NewRequest(http.MethodPost, notification.Url, bytes.NewBuffer(payloadBytes))
+	if err != nil {
+		//utils.SetMessageForLogger(w, "Error creating POST request for webhook")
+		return
+	}
+	request.Header.Set("Content-Type", "application/json")
+	client := &http.Client{}
+
+	resp, err := client.Do(request)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+
+	//if no 200 status code from the webhook url, it was not successful, return an error
+	if resp.StatusCode != 200 {
+		//utils.SetMessageForLogger(w, fmt.Sprintf("Error sending webhook, received status code %d", resp.StatusCode))
+		return
+	}
 
 }
