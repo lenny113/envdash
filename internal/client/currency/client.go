@@ -10,7 +10,7 @@ import (
 )
 
 type CurrencyClient interface {
-	GetSelectedExchangeRates(req Currency_InformationRequest) (Currency_INT_Response, error)
+	GetSelectedExchangeRates(baseCurrency string) (Currency_INT_Response, error)
 }
 
 type currencyClient struct {
@@ -21,16 +21,6 @@ func NewCurrencyClient(httpClient *http.Client) CurrencyClient {
 	return &currencyClient{
 		httpClient: httpClient,
 	}
-}
-
-/*
-This struct contains the input fields required to query the currency API.
-BaseCurrency is always required.
-Currencies contains the selected target currencies to return.
-*/
-type Currency_InformationRequest struct {
-	BaseCurrency CurrencyCode   `json:"baseCurrency"`
-	Currencies   []CurrencyCode `json:"currencies"`
 }
 
 /*
@@ -53,187 +43,12 @@ type Currency_EXT_Response struct {
 
 /*
 This is the internal response returned by this client.
-It contains the base currency and only the selected exchange rates.
+It contains the base currency and all exchange rates returned by the API.
 */
 type Currency_INT_Response struct {
-	BaseCurrency CurrencyCode             `json:"baseCurrency"`
-	Rates        map[CurrencyCode]float64 `json:"rates"`
+	BaseCurrency string             `json:"baseCurrency"`
+	Rates        map[string]float64 `json:"rates"`
 }
-
-/*
-CurrencyCode acts as an enum type for supported currency codes.
-Expand this list as needed.
-*/
-type CurrencyCode string
-
-const (
-	NOK CurrencyCode = "NOK"
-	AED CurrencyCode = "AED"
-	AFN CurrencyCode = "AFN"
-	ALL CurrencyCode = "ALL"
-	AMD CurrencyCode = "AMD"
-	ANG CurrencyCode = "ANG"
-	AOA CurrencyCode = "AOA"
-	ARS CurrencyCode = "ARS"
-	AUD CurrencyCode = "AUD"
-	AWG CurrencyCode = "AWG"
-	AZN CurrencyCode = "AZN"
-	BAM CurrencyCode = "BAM"
-	BBD CurrencyCode = "BBD"
-	BDT CurrencyCode = "BDT"
-	BGN CurrencyCode = "BGN"
-	BHD CurrencyCode = "BHD"
-	BIF CurrencyCode = "BIF"
-	BMD CurrencyCode = "BMD"
-	BND CurrencyCode = "BND"
-	BOB CurrencyCode = "BOB"
-	BRL CurrencyCode = "BRL"
-	BSD CurrencyCode = "BSD"
-	BTN CurrencyCode = "BTN"
-	BWP CurrencyCode = "BWP"
-	BYN CurrencyCode = "BYN"
-	BZD CurrencyCode = "BZD"
-	CAD CurrencyCode = "CAD"
-	CDF CurrencyCode = "CDF"
-	CHF CurrencyCode = "CHF"
-	CLF CurrencyCode = "CLF"
-	CLP CurrencyCode = "CLP"
-	CNH CurrencyCode = "CNH"
-	CNY CurrencyCode = "CNY"
-	COP CurrencyCode = "COP"
-	CRC CurrencyCode = "CRC"
-	CUP CurrencyCode = "CUP"
-	CVE CurrencyCode = "CVE"
-	CZK CurrencyCode = "CZK"
-	DJF CurrencyCode = "DJF"
-	DKK CurrencyCode = "DKK"
-	DOP CurrencyCode = "DOP"
-	DZD CurrencyCode = "DZD"
-	EGP CurrencyCode = "EGP"
-	ERN CurrencyCode = "ERN"
-	ETB CurrencyCode = "ETB"
-	EUR CurrencyCode = "EUR"
-	FJD CurrencyCode = "FJD"
-	FKP CurrencyCode = "FKP"
-	FOK CurrencyCode = "FOK"
-	GBP CurrencyCode = "GBP"
-	GEL CurrencyCode = "GEL"
-	GGP CurrencyCode = "GGP"
-	GHS CurrencyCode = "GHS"
-	GIP CurrencyCode = "GIP"
-	GMD CurrencyCode = "GMD"
-	GNF CurrencyCode = "GNF"
-	GTQ CurrencyCode = "GTQ"
-	GYD CurrencyCode = "GYD"
-	HKD CurrencyCode = "HKD"
-	HNL CurrencyCode = "HNL"
-	HRK CurrencyCode = "HRK"
-	HTG CurrencyCode = "HTG"
-	HUF CurrencyCode = "HUF"
-	IDR CurrencyCode = "IDR"
-	ILS CurrencyCode = "ILS"
-	IMP CurrencyCode = "IMP"
-	INR CurrencyCode = "INR"
-	IQD CurrencyCode = "IQD"
-	IRR CurrencyCode = "IRR"
-	ISK CurrencyCode = "ISK"
-	JEP CurrencyCode = "JEP"
-	JMD CurrencyCode = "JMD"
-	JOD CurrencyCode = "JOD"
-	JPY CurrencyCode = "JPY"
-	KES CurrencyCode = "KES"
-	KGS CurrencyCode = "KGS"
-	KHR CurrencyCode = "KHR"
-	KID CurrencyCode = "KID"
-	KMF CurrencyCode = "KMF"
-	KRW CurrencyCode = "KRW"
-	KWD CurrencyCode = "KWD"
-	KYD CurrencyCode = "KYD"
-	KZT CurrencyCode = "KZT"
-	LAK CurrencyCode = "LAK"
-	LBP CurrencyCode = "LBP"
-	LKR CurrencyCode = "LKR"
-	LRD CurrencyCode = "LRD"
-	LSL CurrencyCode = "LSL"
-	LYD CurrencyCode = "LYD"
-	MAD CurrencyCode = "MAD"
-	MDL CurrencyCode = "MDL"
-	MGA CurrencyCode = "MGA"
-	MKD CurrencyCode = "MKD"
-	MMK CurrencyCode = "MMK"
-	MNT CurrencyCode = "MNT"
-	MOP CurrencyCode = "MOP"
-	MRU CurrencyCode = "MRU"
-	MUR CurrencyCode = "MUR"
-	MVR CurrencyCode = "MVR"
-	MWK CurrencyCode = "MWK"
-	MXN CurrencyCode = "MXN"
-	MYR CurrencyCode = "MYR"
-	MZN CurrencyCode = "MZN"
-	NAD CurrencyCode = "NAD"
-	NGN CurrencyCode = "NGN"
-	NIO CurrencyCode = "NIO"
-	NPR CurrencyCode = "NPR"
-	NZD CurrencyCode = "NZD"
-	OMR CurrencyCode = "OMR"
-	PAB CurrencyCode = "PAB"
-	PEN CurrencyCode = "PEN"
-	PGK CurrencyCode = "PGK"
-	PHP CurrencyCode = "PHP"
-	PKR CurrencyCode = "PKR"
-	PLN CurrencyCode = "PLN"
-	PYG CurrencyCode = "PYG"
-	QAR CurrencyCode = "QAR"
-	RON CurrencyCode = "RON"
-	RSD CurrencyCode = "RSD"
-	RUB CurrencyCode = "RUB"
-	RWF CurrencyCode = "RWF"
-	SAR CurrencyCode = "SAR"
-	SBD CurrencyCode = "SBD"
-	SCR CurrencyCode = "SCR"
-	SDG CurrencyCode = "SDG"
-	SEK CurrencyCode = "SEK"
-	SGD CurrencyCode = "SGD"
-	SHP CurrencyCode = "SHP"
-	SLE CurrencyCode = "SLE"
-	SLL CurrencyCode = "SLL"
-	SOS CurrencyCode = "SOS"
-	SRD CurrencyCode = "SRD"
-	SSP CurrencyCode = "SSP"
-	STN CurrencyCode = "STN"
-	SYP CurrencyCode = "SYP"
-	SZL CurrencyCode = "SZL"
-	THB CurrencyCode = "THB"
-	TJS CurrencyCode = "TJS"
-	TMT CurrencyCode = "TMT"
-	TND CurrencyCode = "TND"
-	TOP CurrencyCode = "TOP"
-	TRY CurrencyCode = "TRY"
-	TTD CurrencyCode = "TTD"
-	TVD CurrencyCode = "TVD"
-	TWD CurrencyCode = "TWD"
-	TZS CurrencyCode = "TZS"
-	UAH CurrencyCode = "UAH"
-	UGX CurrencyCode = "UGX"
-	USD CurrencyCode = "USD"
-	UYU CurrencyCode = "UYU"
-	UZS CurrencyCode = "UZS"
-	VES CurrencyCode = "VES"
-	VND CurrencyCode = "VND"
-	VUV CurrencyCode = "VUV"
-	WST CurrencyCode = "WST"
-	XAF CurrencyCode = "XAF"
-	XCD CurrencyCode = "XCD"
-	XCG CurrencyCode = "XCG"
-	XDR CurrencyCode = "XDR"
-	XOF CurrencyCode = "XOF"
-	XPF CurrencyCode = "XPF"
-	YER CurrencyCode = "YER"
-	ZAR CurrencyCode = "ZAR"
-	ZMW CurrencyCode = "ZMW"
-	ZWG CurrencyCode = "ZWG"
-	ZWL CurrencyCode = "ZWL"
-)
 
 /*
 Constants used only in this file.
@@ -248,20 +63,16 @@ It validates input, then calls functions that;
   - builds the URL
   - performs the HTTP request
   - decodes the response
-  - filters the rates based on requested currencies
 
 after which it returns an internal response.
+It also prints the conversions for debugging.
 */
-func (c *currencyClient) GetSelectedExchangeRates(req Currency_InformationRequest) (Currency_INT_Response, error) {
-	if strings.TrimSpace(string(req.BaseCurrency)) == "" {
+func (c *currencyClient) GetSelectedExchangeRates(baseCurrency string) (Currency_INT_Response, error) {
+	if strings.TrimSpace(baseCurrency) == "" {
 		return Currency_INT_Response{}, fmt.Errorf("missing required base currency")
 	}
 
-	if len(req.Currencies) == 0 {
-		return Currency_INT_Response{}, fmt.Errorf("a request for no currencies was made")
-	}
-
-	fullURL, err := buildURL(req)
+	fullURL, err := buildURL(baseCurrency)
 	if err != nil {
 		return Currency_INT_Response{}, err
 	}
@@ -276,22 +87,9 @@ func (c *currencyClient) GetSelectedExchangeRates(req Currency_InformationReques
 		return Currency_INT_Response{}, err
 	}
 
-	filteredRates := make(map[CurrencyCode]float64)
-	for _, currency := range req.Currencies {
-		target := strings.ToUpper(strings.TrimSpace(string(currency)))
-		if target == "" {
-			continue
-		}
-
-		rate, exists := decoded.Rates[target]
-		if exists {
-			filteredRates[CurrencyCode(target)] = rate
-		}
-	}
-
 	response := Currency_INT_Response{
-		BaseCurrency: CurrencyCode(strings.ToUpper(decoded.BaseCode)),
-		Rates:        filteredRates,
+		BaseCurrency: strings.ToUpper(strings.TrimSpace(decoded.BaseCode)),
+		Rates:        decoded.Rates,
 	}
 
 	return response, nil
@@ -300,10 +98,9 @@ func (c *currencyClient) GetSelectedExchangeRates(req Currency_InformationReques
 /*
 This function constructs the request URL for the currency API.
 It requests all rates for the provided base currency.
-Filtering happens after decoding.
 */
-func buildURL(req Currency_InformationRequest) (string, error) {
-	baseCurrency := strings.ToUpper(strings.TrimSpace(string(req.BaseCurrency)))
+func buildURL(baseCurrency string) (string, error) {
+	baseCurrency = strings.ToUpper(strings.TrimSpace(baseCurrency))
 	if baseCurrency == "" {
 		return "", fmt.Errorf("missing required base currency")
 	}
@@ -314,7 +111,7 @@ func buildURL(req Currency_InformationRequest) (string, error) {
 
 /*
 This function performs the outbound HTTP GET request.
-It should use the injected httpClient.
+It uses the injected httpClient.
 */
 func (c *currencyClient) httpRequestFunction(fullURL string) ([]byte, error) {
 	resp, err := c.httpClient.Get(fullURL)

@@ -1,16 +1,21 @@
 package client
 
-import (
-	"testing"
-)
+import "testing"
 
 func TestBuildURL_ValidBaseCurrency(t *testing.T) {
-	req := Currency_InformationRequest{
-		BaseCurrency: NOK,
-		Currencies:   []CurrencyCode{EUR, SEK},
+	fullURL, err := buildURL("NOK")
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	fullURL, err := buildURL(req)
+	expected := base_url + "NOK"
+	if fullURL != expected {
+		t.Fatalf("expected URL %q, got %q", expected, fullURL)
+	}
+}
+
+func TestBuildURL_TrimsAndUppercasesBaseCurrency(t *testing.T) {
+	fullURL, err := buildURL(" nok ")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -22,11 +27,7 @@ func TestBuildURL_ValidBaseCurrency(t *testing.T) {
 }
 
 func TestBuildURL_MissingBaseCurrency(t *testing.T) {
-	req := Currency_InformationRequest{
-		Currencies: []CurrencyCode{EUR, SEK},
-	}
-
-	_, err := buildURL(req)
+	_, err := buildURL("")
 	if err == nil {
 		t.Fatal("expected error when base currency is missing")
 	}
@@ -95,20 +96,22 @@ func TestDecodeResponse_MissingRates(t *testing.T) {
 	}
 }
 
-func TestGetSelectedExchangeRates_FiltersRequestedCurrencies(t *testing.T) {
-	req := Currency_InformationRequest{
-		BaseCurrency: NOK,
-		Currencies:   []CurrencyCode{EUR, SEK},
-	}
+func TestDecodeResponse_ResultNotSuccess(t *testing.T) {
+	body := []byte(`{
+		"result": "error",
+		"base_code": "NOK",
+		"rates": {
+			"EUR": 0.089044
+		}
+	}`)
 
-	fullURL, err := buildURL(req)
-	if err != nil {
-		t.Fatal(err)
+	_, err := decodeResponse(body)
+	if err == nil {
+		t.Fatal("expected error when result is not success")
 	}
-	if fullURL != base_url+"NOK" {
-		t.Fatalf("unexpected URL: %q", fullURL)
-	}
+}
 
+func TestInternalResponse_ContainsAllRates(t *testing.T) {
 	decoded, err := decodeResponse([]byte(`{
 		"result": "success",
 		"base_code": "NOK",
@@ -122,36 +125,28 @@ func TestGetSelectedExchangeRates_FiltersRequestedCurrencies(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	filteredRates := make(map[CurrencyCode]float64)
-	for _, currency := range req.Currencies {
-		rate, exists := decoded.Rates[string(currency)]
-		if exists {
-			filteredRates[currency] = rate
-		}
-	}
-
 	response := Currency_INT_Response{
-		BaseCurrency: CurrencyCode(decoded.BaseCode),
-		Rates:        filteredRates,
+		BaseCurrency: decoded.BaseCode,
+		Rates:        decoded.Rates,
 	}
 
-	if response.BaseCurrency != NOK {
+	if response.BaseCurrency != "NOK" {
 		t.Fatalf("expected base currency NOK, got %q", response.BaseCurrency)
 	}
 
-	if len(response.Rates) != 2 {
-		t.Fatalf("expected 2 filtered rates, got %d", len(response.Rates))
+	if len(response.Rates) != 3 {
+		t.Fatalf("expected 3 rates, got %d", len(response.Rates))
 	}
 
-	if response.Rates[EUR] != 0.089044 {
-		t.Errorf("expected EUR rate 0.089044, got %v", response.Rates[EUR])
+	if response.Rates["EUR"] != 0.089044 {
+		t.Errorf("expected EUR rate 0.089044, got %v", response.Rates["EUR"])
 	}
 
-	if response.Rates[SEK] != 0.969592 {
-		t.Errorf("expected SEK rate 0.969592, got %v", response.Rates[SEK])
+	if response.Rates["SEK"] != 0.969592 {
+		t.Errorf("expected SEK rate 0.969592, got %v", response.Rates["SEK"])
 	}
 
-	if _, exists := response.Rates[USD]; exists {
-		t.Error("did not expect USD in filtered response")
+	if response.Rates["USD"] != 0.10273 {
+		t.Errorf("expected USD rate 0.10273, got %v", response.Rates["USD"])
 	}
 }

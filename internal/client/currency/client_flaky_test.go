@@ -16,25 +16,28 @@ func TestGetSelectedExchangeRates(t *testing.T) {
 
 	currencyClient := NewCurrencyClient(httpClient)
 
-	req := Currency_InformationRequest{
-		BaseCurrency: NOK,
-		Currencies:   []CurrencyCode{EUR, SEK},
-	}
-
-	data, err := currencyClient.GetSelectedExchangeRates(req)
+	data, err := currencyClient.GetSelectedExchangeRates("NOK")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if data.BaseCurrency != NOK {
+	if data.BaseCurrency != "NOK" {
 		t.Fatalf("expected base currency to be NOK, got %q", data.BaseCurrency)
 	}
 
-	if len(data.Rates) != 2 {
-		t.Fatalf("expected 2 rates, got %d: %#v", len(data.Rates), data.Rates)
+	if len(data.Rates) == 0 {
+		t.Fatal("expected rates in response, got none")
 	}
 
-	eurRate, ok := data.Rates[EUR]
+	nokRate, ok := data.Rates["NOK"]
+	if !ok {
+		t.Fatal("expected NOK in response")
+	}
+	if nokRate != 1 {
+		t.Fatalf("expected NOK rate to be 1, got %v", nokRate)
+	}
+
+	eurRate, ok := data.Rates["EUR"]
 	if !ok {
 		t.Fatal("expected EUR in response")
 	}
@@ -42,75 +45,46 @@ func TestGetSelectedExchangeRates(t *testing.T) {
 		t.Errorf("expected EUR rate to be > 0, got %v", eurRate)
 	}
 
-	sekRate, ok := data.Rates[SEK]
+	sekRate, ok := data.Rates["SEK"]
 	if !ok {
 		t.Fatal("expected SEK in response")
 	}
 	if sekRate <= 0 {
 		t.Errorf("expected SEK rate to be > 0, got %v", sekRate)
 	}
+
+	usdRate, ok := data.Rates["USD"]
+	if !ok {
+		t.Fatal("expected USD in response")
+	}
+	if usdRate <= 0 {
+		t.Errorf("expected USD rate to be > 0, got %v", usdRate)
+	}
+
+	t.Logf("base currency: %s", data.BaseCurrency)
+	t.Logf("number of rates returned: %d", len(data.Rates))
+	t.Logf("full conversion map from the Application Programming Interface (API): %#v", data.Rates)
 }
 
-func TestGetSelectedExchangeRates_AllCurrencies(t *testing.T) {
+func TestGetSelectedExchangeRates_WithTrimmedLowercaseInput(t *testing.T) {
 	httpClient := &http.Client{
 		Timeout: 10 * time.Second,
 	}
 
 	currencyClient := NewCurrencyClient(httpClient)
 
-	allCurrencies := []CurrencyCode{
-		NOK, AED, AFN, ALL, AMD, ANG, AOA, ARS, AUD, AWG, AZN,
-		BAM, BBD, BDT, BGN, BHD, BIF, BMD, BND, BOB, BRL, BSD,
-		BTN, BWP, BYN, BZD, CAD, CDF, CHF, CLF, CLP, CNH, CNY,
-		COP, CRC, CUP, CVE, CZK, DJF, DKK, DOP, DZD, EGP, ERN,
-		ETB, EUR, FJD, FKP, FOK, GBP, GEL, GGP, GHS, GIP, GMD,
-		GNF, GTQ, GYD, HKD, HNL, HRK, HTG, HUF, IDR, ILS, IMP,
-		INR, IQD, IRR, ISK, JEP, JMD, JOD, JPY, KES, KGS, KHR,
-		KID, KMF, KRW, KWD, KYD, KZT, LAK, LBP, LKR, LRD, LSL,
-		LYD, MAD, MDL, MGA, MKD, MMK, MNT, MOP, MRU, MUR, MVR,
-		MWK, MXN, MYR, MZN, NAD, NGN, NIO, NPR, NZD, OMR, PAB,
-		PEN, PGK, PHP, PKR, PLN, PYG, QAR, RON, RSD, RUB, RWF,
-		SAR, SBD, SCR, SDG, SEK, SGD, SHP, SLE, SLL, SOS, SRD,
-		SSP, STN, SYP, SZL, THB, TJS, TMT, TND, TOP, TRY, TTD,
-		TVD, TWD, TZS, UAH, UGX, USD, UYU, UZS, VES, VND, VUV,
-		WST, XAF, XCD, XCG, XDR, XOF, XPF, YER, ZAR, ZMW, ZWG,
-		ZWL,
-	}
-
-	req := Currency_InformationRequest{
-		BaseCurrency: NOK,
-		Currencies:   allCurrencies,
-	}
-
-	data, err := currencyClient.GetSelectedExchangeRates(req)
+	data, err := currencyClient.GetSelectedExchangeRates(" nok ")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if data.BaseCurrency != NOK {
+	if data.BaseCurrency != "NOK" {
 		t.Fatalf("expected base currency to be NOK, got %q", data.BaseCurrency)
 	}
 
-	if len(data.Rates) != len(allCurrencies) {
-		t.Fatalf("expected %d rates, got %d", len(allCurrencies), len(data.Rates))
+	if len(data.Rates) == 0 {
+		t.Fatal("expected rates in response, got none")
 	}
 
-	for _, currency := range allCurrencies {
-		rate, ok := data.Rates[currency]
-		if !ok {
-			t.Errorf("expected %s in response", currency)
-			continue
-		}
-
-		if currency == NOK {
-			if rate != 1 {
-				t.Errorf("expected NOK rate to be 1, got %v", rate)
-			}
-			continue
-		}
-
-		if rate <= 0 {
-			t.Errorf("expected %s rate to be > 0, got %v", currency, rate)
-		}
-	}
+	t.Logf("full conversion map from the Application Programming Interface (API): %#v", data.Rates)
 }
