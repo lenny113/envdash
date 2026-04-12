@@ -65,12 +65,22 @@ func main() {
 	//initializing router
 	router := http.NewServeMux()
 
-	router.HandleFunc("/", handler.DefaultHandler)
-	//router.HandleFunc(utils.REGISTRATION_PATH, h.RegistrationHandler)
+	//public routes:
 	router.HandleFunc(utils.AUTHENTICATION_PATH, h.RegisterAuth)
 	router.HandleFunc(utils.AUTHENTICATION_PATH+"/", h.RegisterAuth)
-	router.HandleFunc(utils.AUTHENTICATION_PATH+"/{id}", h.DeleteAuth)
-	router.HandleFunc(utils.AUTHENTICATION_PATH+"/{id}"+"/", h.DeleteAuth)
+	//Yet to add, but also public route:
+	//router.HandleFunc(utiils.STATUS_PATH, h.StatusHandler)
+
+	//private routes get atuhenticated by middleware, only accessible with valid API key:
+	privateRouter := http.NewServeMux()
+	privateRouter.HandleFunc("/", handler.DefaultHandler)
+	privateRouter.HandleFunc(utils.REGISTRATION_PATH, h.RegistrationHandler)
+	privateRouter.HandleFunc(utils.AUTHENTICATION_PATH+"/{id}", h.DeleteAuth)
+	privateRouter.HandleFunc(utils.AUTHENTICATION_PATH+"/{id}"+"/", h.DeleteAuth)
+
+	//Only for some of the routnes, not global
+	router.Handle("/", h.AuthMiddleware(privateRouter))
+
 	// Configure the HTTP server with the network address and
 	// the router wrapped in logging middleware.
 	server := http.Server{
