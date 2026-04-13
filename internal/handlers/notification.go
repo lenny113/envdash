@@ -84,7 +84,7 @@ func (h *Handler) registerNewNotification(w http.ResponseWriter, r *http.Request
 		//DELETE?var threshold models.ThresholdNotification
 
 		//validate threashold body for valid values
-		err, errorMessage := validateThreashold(*request.ThresholdNotification)
+		err, errorMessage := validateThreshold(*request.ThresholdNotification)
 		if err != nil {
 			utils.SetMessageForLogger(w, "Invalid threshold in notification registration: "+errorMessage)
 			writeJSONError(w, http.StatusBadRequest, "Invalid threshold in notification registration: "+errorMessage)
@@ -122,13 +122,6 @@ func (h *Handler) registerNewNotification(w http.ResponseWriter, r *http.Request
 
 	w.Write(responseJSON)
 
-	err = sendingWebhook(response.Id, request)
-	if err != nil {
-		utils.SetMessageForLogger(w, "Error sending webhook for notification with id "+response.Id)
-		writeJSONError(w, http.StatusInternalServerError, "Error sending webhook for notification with id "+response.Id)
-		return
-	}
-
 	utils.SetMessageForLogger(w, "Notification registered with id "+response.Id)
 
 }
@@ -142,10 +135,6 @@ func validateNotification(request models.RegisterWebhook) (error, string) {
 		errors = append(errors, "Invalid URL")
 	}
 
-	//country check
-	if request.Country == "" {
-		errors = append(errors, "Missing Country in request body")
-	}
 	//TODO: add check for valid country, maybe by checking if the country is in the list of countries we have in our database
 
 	//event check
@@ -255,7 +244,7 @@ func (h *Handler) deleteNotification(w http.ResponseWriter, r *http.Request) {
 	utils.SetMessageForLogger(w, "Notification with id "+id+" deleted")
 }
 
-func validateThreashold(thresholdStruct models.ThresholdNotification) (error, string) {
+func validateThreshold(thresholdStruct models.ThresholdNotification) (error, string) {
 	var errors []string
 
 	//check if threshold body is present
@@ -323,7 +312,7 @@ func sendingWebhook(key string, notification models.RegisterWebhook) error {
 	defer resp.Body.Close()
 
 	//if no 200 status code from the webhook url, it was not successful, return an error
-	if resp.StatusCode != 200 {
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		//utils.SetMessageForLogger(w, fmt.Sprintf("Error sending webhook, received status code %d", resp.StatusCode))
 		return fmt.Errorf("Error sending webhook, received status code %d", resp.StatusCode)
 	}
@@ -338,16 +327,12 @@ func (h *Handler) CheckWhatNotificationsToSend(ctx context.Context, country stri
 	//get all notifications from the database, and check if there are any that should be sent based on the event and country of the notification, and if so, it will call the sendingWebhook function to send the notification to the registered webhook URL
 	allNotifications, err := h.store.GetAllNotifications(ctx)
 	if err != nil {
-		//utils.SetMessageForLogger(w, "Error fetching notifications from database", err)
+		utils.SetMessageForLogger(nil, "Error fetching notifications from database")
 		return
 	}
 	if len(allNotifications) == 0 {
 		utils.SetMessageForLogger(nil, "No notifications found in database")
 		return
-	}
-
-	for _, notification := range allNotifications {
-		fmt.Println("Stored:", notification.Country, notification.Event)
 	}
 
 	for _, notification := range allNotifications {
