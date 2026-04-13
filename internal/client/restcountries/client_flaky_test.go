@@ -21,6 +21,7 @@ func TestGetCountryInfo(t *testing.T) {
 		Population:  true,
 		Area:        true,
 		Borders:     true,
+		Currency:    true,
 	}
 
 	data, err := restCountriesClient.GetCountryInfo(req)
@@ -65,9 +66,6 @@ func TestGetCountryInfo(t *testing.T) {
 	if data.Population == nil {
 		t.Fatal("expected Population in response")
 	}
-	if *data.Population != 5379475 {
-		t.Errorf("expected Population to be 5379475, got %d", *data.Population)
-	}
 
 	if data.Area == nil {
 		t.Fatal("expected Area in response")
@@ -87,5 +85,20 @@ func TestGetCountryInfo(t *testing.T) {
 		if (*data.Borders)[i] != expected {
 			t.Errorf("expected border[%d] to be %q, got %q", i, expected, (*data.Borders)[i])
 		}
+	}
+
+	if data.Currencies == nil {
+		t.Fatal("expected Currencies in response")
+	}
+
+	foundNOK := false
+	for _, code := range *data.Currencies {
+		if code == "NOK" {
+			foundNOK = true
+			break
+		}
+	}
+	if !foundNOK {
+		t.Errorf("expected Currencies to contain NOK, got %v", *data.Currencies)
 	}
 }

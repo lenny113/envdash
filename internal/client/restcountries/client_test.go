@@ -14,6 +14,7 @@ func TestBuildURL_WithISOCode(t *testing.T) {
 		Coordinates: true,
 		Population:  true,
 		Area:        true,
+		Currency:    true,
 		Borders:     true,
 	}
 
@@ -39,6 +40,7 @@ func TestBuildURL_WithISOCode(t *testing.T) {
 		"population",
 		"area",
 		"borders",
+		"currencies",
 	}
 
 	for _, field := range expectedFields {
@@ -101,14 +103,20 @@ func TestBuildURL_NoRequestedFields(t *testing.T) {
 
 func TestDecodeRESTCountriesResponse_ISO(t *testing.T) {
 	body := []byte(`{
-		"name": { "common": "Norway" },
-		"cca2": "NO",
-		"capital": ["Oslo"],
-		"latlng": [62, 10],
-		"population": 5379475,
-		"area": 323802,
-		"borders": ["FIN", "SWE", "RUS"]
-	}`)
+	"name": { "common": "Norway" },
+	"cca2": "NO",
+	"capital": ["Oslo"],
+	"latlng": [62, 10],
+	"population": 5379475,
+	"area": 323802,
+	"borders": ["FIN", "SWE", "RUS"],
+	"currencies": {
+		"NOK": {
+			"name": "Norwegian krone",
+			"symbol": "kr"
+		}
+	}
+}`)
 
 	data, err := decodeRESTCountriesResponse(body, true)
 	if err != nil {
@@ -142,20 +150,32 @@ func TestDecodeRESTCountriesResponse_ISO(t *testing.T) {
 	if data.Borders == nil || len(*data.Borders) != 3 {
 		t.Fatalf("expected 3 borders, got %#v", data.Borders)
 	}
+	if data.Currencies == nil || len(*data.Currencies) != 1 {
+		t.Fatalf("expected 1 currency, got %#v", data.Currencies)
+	}
+	if (*data.Currencies)[0] != "NOK" {
+		t.Fatalf("expected currency NOK, got %#v", *data.Currencies)
+	}
 }
 
 func TestDecodeRESTCountriesResponse_Name(t *testing.T) {
 	body := []byte(`[
-		{
-			"name": { "common": "Norway" },
-			"cca2": "NO",
-			"capital": ["Oslo"],
-			"latlng": [62, 10],
-			"population": 5379475,
-			"area": 323802,
-			"borders": ["FIN", "SWE", "RUS"]
+	{
+		"name": { "common": "Norway" },
+		"cca2": "NO",
+		"capital": ["Oslo"],
+		"latlng": [62, 10],
+		"population": 5379475,
+		"area": 323802,
+		"borders": ["FIN", "SWE", "RUS"],
+		"currencies": {
+			"NOK": {
+				"name": "Norwegian krone",
+				"symbol": "kr"
+			}
 		}
-	]`)
+	}
+]`)
 
 	data, err := decodeRESTCountriesResponse(body, false)
 	if err != nil {
@@ -167,6 +187,12 @@ func TestDecodeRESTCountriesResponse_Name(t *testing.T) {
 	}
 	if data.CCA2 == nil || *data.CCA2 != "NO" {
 		t.Fatalf("expected CCA2 to be NO, got %#v", data.CCA2)
+	}
+	if data.Currencies == nil || len(*data.Currencies) != 1 {
+		t.Fatalf("expected 1 currency, got %#v", data.Currencies)
+	}
+	if (*data.Currencies)[0] != "NOK" {
+		t.Fatalf("expected currency NOK, got %#v", *data.Currencies)
 	}
 }
 
