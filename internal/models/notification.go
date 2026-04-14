@@ -5,6 +5,7 @@ type RegisterWebhook struct {
 	Country               string                 `json:"country"`
 	Event                 string                 `json:"event"`
 	ThresholdNotification *ThresholdNotification `json:"threshold,omitempty" firestore:"threshold,omitempty"`
+	User                  string                 `json:"-" firestore:"user"`
 }
 
 type ThresholdNotification struct {

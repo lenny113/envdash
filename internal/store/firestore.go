@@ -94,7 +94,7 @@ func (f *Store) CreateApiStorage(ctx context.Context, reg model.Authentication) 
 		"user":             reg.Email,
 	})
 
-	emailDoc := f.client.Collection("authentication_info").Doc(reg.Email)
+	emailDoc := f.client.Collection("users").Doc(reg.Email)
 	//creating nested api key structure
 	EmailApiDoc := emailDoc.Collection("api_keys").Doc(hashedApiKey)
 
@@ -123,7 +123,7 @@ return error-Returns anny error and dont complete the function
 */
 func (h *Store) CountApiPerUser(ctx context.Context, email string) (int, error) {
 	//getting info about spesific email
-	EmailDoc := h.client.Collection("authentication_info").Doc(email)
+	EmailDoc := h.client.Collection("users").Doc(email)
 	//seeing how manny api keys that user hve
 	ApiKeyDoc := EmailDoc.Collection("api_keys")
 
@@ -178,7 +178,7 @@ func (f *Store) DeleteAPIkey(ctx context.Context, apiKey string) error {
 	}
 
 	//now goes to right user, and deletes that API key:
-	userDoc := f.client.Collection("authentication_info").Doc(userMail)
+	userDoc := f.client.Collection("users").Doc(userMail)
 
 	nestedDocRef := userDoc.Collection("api_keys").Doc(apiKeyHashed)
 
@@ -203,6 +203,24 @@ func hashAPIKey(apiKeyUnhashed string) string {
 	apiKeyHashed := sha256.Sum256([]byte(apiKeyUnhashed))
 	apiKeyHashedString := hex.EncodeToString(apiKeyHashed[:])
 	return apiKeyHashedString
+}
+
+func (f *Store) FindUserWithApiKey(ctx context.Context, apiKey string) (string, error) {
+	apiKeyHashed := hashAPIKey(apiKey)
+	docRef := f.client.Collection("all_api_keys").Doc(apiKeyHashed)
+
+	docSnap, err := docRef.Get(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	data := docSnap.Data()
+	userMail, ok := data["user"].(string)
+	if !ok {
+		return "", fmt.Errorf("Cannot get email, user field missing or not a string (Firestore)")
+	}
+
+	return userMail, nil
 }
 
 func (f *Store) GetRegistration(ctx context.Context, id string) (*model.Registration, error) {
@@ -292,42 +310,63 @@ func (f *Store) DeleteRegistration(ctx context.Context, id string) error {
 //****************************************************************************************************************//
 
 // stores notification in Firestore, this is used when a user register a webhook, and we want to store this in database
-func (f *Store) CreateNotification(ctx context.Context, notification model.RegisterWebhook) (string, error) {
-	//sotres in "notifications" collection, each document is a notification, with all data about this notification stored in the document
-	docRef := f.client.Collection("notifications").NewDoc()
-	_, err := docRef.Set(ctx, notification)
+func (f *Store) CreateNotification(ctx context.Context, notification model.RegisterWebhook, apiKey string) (string, error) {
+
+	//finding the user this api key is registerd to
+
+	name, err := f.FindUserWithApiKey(ctx, apiKey)
+	if err != nil {
+		return "", err
+	}
+	if name == "" {
+		return "", fmt.Errorf("User not found for API key")
+	}
+	notification.User = name
+
+	//sotres in "all_notifications" collection, each document is a notification, with all data about this notification stored in the document
+	docRef := f.client.Collection("all_notifications").NewDoc()
+	_, err = docRef.Set(ctx, notification)
 	if err != nil {
 		return "", err
 	}
 
-	//TODO: Add also under authentication_info, so we can easily find all notifications for a specific user
+	//stores in "user" collection
+	userRef := f.client.Collection("users").Doc(name)
+	userNotificationRef := userRef.Collection("all_notifications").Doc(docRef.ID)
+
+	_, err = userNotificationRef.Set(ctx, notification)
+	if err != nil {
+		return "", err
+	}
 
 	return docRef.ID, nil
 }
 
-func (f *Store) GetSpecificNotification(ctx context.Context, id string) (model.AllRegisteredWebhook, error) {
+func (f *Store) GetSpecificNotification(ctx context.Context, id string) (model.AllRegisteredWebhook, *firestore.DocumentRef, error) {
 
-	doc, err := f.client.Collection("notifications").Doc(id).Get(ctx)
+	docRef := f.client.Collection("all_notifications").Doc(id)
+
+	docSnap, err := docRef.Get(ctx)
 	if err != nil {
 		//there is no notification with this id, return error
-		return model.AllRegisteredWebhook{}, err
+		return model.AllRegisteredWebhook{}, nil, err
 	}
 
 	//if found, convert to struct and return
 	var notification model.RegisterWebhook
-	if err := doc.DataTo(&notification); err != nil {
-		return model.AllRegisteredWebhook{}, err
+	if err := docSnap.DataTo(&notification); err != nil {
+		return model.AllRegisteredWebhook{}, nil, err
 	}
 
 	return model.AllRegisteredWebhook{
-		Id:              doc.Ref.ID,
+		Id:              docRef.ID,
 		RegisterWebhook: notification,
-	}, nil
+	}, docRef, nil
 
 }
 
 func (f *Store) GetAllNotifications(ctx context.Context) ([]model.AllRegisteredWebhook, error) {
-	iter := f.client.Collection("notifications").Documents(ctx)
+	iter := f.client.Collection("all_notifications").Documents(ctx)
 	defer iter.Stop()
 
 	var result []model.AllRegisteredWebhook
@@ -355,17 +394,79 @@ func (f *Store) GetAllNotifications(ctx context.Context) ([]model.AllRegisteredW
 	return result, nil
 }
 
-func (f *Store) DeleteNotification(ctx context.Context, id string) error {
-
-	docRef := f.client.Collection("notifications").Doc(id)
-	// check if exists
-	_, err := docRef.Get(ctx)
+func (f *Store) GetAllNotificationsForUser(ctx context.Context, apiKey string) ([]model.AllRegisteredWebhook, error) {
+	// Finn email fra api-nøkkelen
+	userEmail, err := f.FindUserWithApiKey(ctx, apiKey)
 	if err != nil {
-		//there is no notification with this id, return error
+		return nil, err
+	}
+
+	// Hent alle notifications under denne brukeren
+	iter := f.client.Collection("users").Doc(userEmail).
+		Collection("all_notifications").
+		Documents(ctx)
+	defer iter.Stop()
+
+	var result []model.AllRegisteredWebhook
+
+	for {
+		doc, err := iter.Next()
+		if err != nil {
+			if err == iterator.Done {
+				break
+			}
+			return nil, err
+		}
+
+		var notification model.RegisterWebhook
+		if err := doc.DataTo(&notification); err != nil {
+			return nil, err
+		}
+
+		result = append(result, model.AllRegisteredWebhook{
+			Id:              doc.Ref.ID,
+			RegisterWebhook: notification,
+		})
+	}
+
+	return result, nil
+}
+
+func (f *Store) DeleteNotification(ctx context.Context, id string, apiKey string) error {
+
+	//check if notification exists
+	notification, WhereDocIsStored, err := f.GetSpecificNotification(ctx, id)
+	if err != nil {
+		//notification does not excist, return error
+		return fmt.Errorf("does not exist")
+	}
+
+	//Find out what user this API key belongs to
+	userOfApiKey, err := f.FindUserWithApiKey(ctx, apiKey)
+	if err != nil {
 		return err
 	}
-	//delete notification with this id
-	_, err = docRef.Delete(ctx)
-	return err
 
+	//check if the user of api key is the same as the owner of the notification
+	if notification.User != userOfApiKey {
+		//user do not have access to this notification, return error
+		return fmt.Errorf("No access")
+	}
+
+	//delete from all_notifications first, this is where we check what notifications to send,
+	// therefor this is the most important
+	_, err = WhereDocIsStored.Delete(ctx)
+	if err != nil {
+		return err
+	}
+
+	//Delete from user collection
+	deleteUserNotification := f.client.Collection("users").Doc(userOfApiKey).Collection("all_notifications").Doc(id)
+	_, err = deleteUserNotification.Delete(ctx)
+	if err != nil {
+		return err
+	}
+
+	//if no error, notification is deleted in both places, return nil
+	return nil
 }

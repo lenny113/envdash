@@ -21,7 +21,7 @@ func (h *Handler) NotificationSpinner(w http.ResponseWriter, r *http.Request) {
 		h.allNotifications(w, r)
 	default:
 		writeJSONError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		utils.SetMessageForLogger(w, "Method not allowed in NotificationSpinner: "+r.Method)
+		utils.SetMessageForLogger(w, utils.LOG_NOTIFICATION+"Method not allowed in NotificationSpinner: "+r.Method)
 	}
 }
 
@@ -95,9 +95,13 @@ func (h *Handler) registerNewNotification(w http.ResponseWriter, r *http.Request
 		request.ThresholdNotification.Field = strings.ToUpper(request.ThresholdNotification.Field) //convert threashold field to uppercase to make it case insensitive
 	}
 
+	//adding api key to the request struct, so we can store it under the assosiated user
+	api := r.Header.Get("X-Api-Key")
+
 	//Stores in Firestore
-	notificationId, err := h.store.CreateNotification(r.Context(), request)
+	notificationId, err := h.store.CreateNotification(r.Context(), request, api)
 	if err != nil {
+		fmt.Println("Error creating notification in Firestore: ", err)
 		utils.SetMessageForLogger(w, "Error creating notification in Firestore")
 		writeJSONError(w, http.StatusInternalServerError, "Error creating notification")
 		return
@@ -173,10 +177,15 @@ func validateNotification(request models.RegisterWebhook) (error, string) {
 }
 
 func (h *Handler) allNotifications(w http.ResponseWriter, r *http.Request) {
-	AllSaved, err := h.store.GetAllNotifications(r.Context())
+	AllSaved, err := h.store.GetAllNotificationsForUser(r.Context(), r.Header.Get("X-API-Key"))
 	if err != nil {
 		utils.SetMessageForLogger(w, "Error fetching notifications")
 		writeJSONError(w, http.StatusInternalServerError, "Error fetching notifications")
+		return
+	}
+	if AllSaved == nil {
+		writeJSONError(w, http.StatusOK, "You have no stored notifications yet")
+		utils.SetMessageForLogger(w, "No stored notifications for user")
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -201,7 +210,7 @@ func (h *Handler) specificNotification(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	notification, err := h.store.GetSpecificNotification(r.Context(), id)
+	notification, _, err := h.store.GetSpecificNotification(r.Context(), id)
 	if err != nil {
 		//if not found, return 404 error
 		utils.SetMessageForLogger(w, "Notification not found")
@@ -232,12 +241,22 @@ func (h *Handler) deleteNotification(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "Missing id in URL path")
 		return
 	}
-	err := h.store.DeleteNotification(r.Context(), id)
+
+	err := h.store.DeleteNotification(r.Context(), id, r.Header.Get("X-API-Key"))
 	if err != nil {
-		//if not found, return 404 error
-		utils.SetMessageForLogger(w, "Notification not found")
-		writeJSONError(w, http.StatusNotFound, "Notification not found")
-		return
+		if err.Error() == "does not exist" {
+			utils.SetMessageForLogger(w, "Notification not found")
+			writeJSONError(w, http.StatusNotFound, "Notification not found")
+			return
+		} else if err.Error() == "No access" {
+			utils.SetMessageForLogger(w, "No access to this notification")
+			writeJSONError(w, http.StatusForbidden, "No privileges to delete this notification")
+			return
+		} else {
+			utils.SetMessageForLogger(w, "Error Firestore, deleting notification: ")
+			writeJSONError(w, http.StatusInternalServerError, "Error deleting notification")
+			return
+		}
 	}
 
 	//if deleted successfully, return a success message
