@@ -1,12 +1,15 @@
 package client
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"golang.org/x/time/rate"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 type RestCountriesClient interface {
@@ -14,11 +17,13 @@ type RestCountriesClient interface {
 }
 type restCountriesClient struct {
 	httpClient *http.Client
+	limiter    *rate.Limiter
 }
 
 func NewRestCountriesClient(httpClient *http.Client) RestCountriesClient {
 	return &restCountriesClient{
 		httpClient: httpClient,
+		limiter:    rate.NewLimiter(rate.Every(1*time.Second), 1),
 	}
 }
 
@@ -109,6 +114,10 @@ func (c *restCountriesClient) GetCountryInfo(req RestCountries_InformationReques
 	// TODO: see if we can decouple the request here somehow.
 	// TODO: add more robust error handling, we should inspect the error and return an appropriate http request.
 	// Right now we only forward the error returned from a get request.
+	if err := c.limiter.Wait(context.Background()); err != nil {
+		return RestCountries_INT_Response{}, err
+	}
+
 	resp, err := c.httpClient.Get(fullURL)
 	if err != nil {
 		return RestCountries_INT_Response{}, err

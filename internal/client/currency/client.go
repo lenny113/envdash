@@ -1,12 +1,15 @@
 package client
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"golang.org/x/time/rate"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 type CurrencyClient interface {
@@ -15,11 +18,13 @@ type CurrencyClient interface {
 
 type currencyClient struct {
 	httpClient *http.Client
+	limiter    *rate.Limiter
 }
 
 func NewCurrencyClient(httpClient *http.Client) CurrencyClient {
 	return &currencyClient{
 		httpClient: httpClient,
+		limiter:    rate.NewLimiter(rate.Every(1*time.Second), 1),
 	}
 }
 
@@ -114,6 +119,10 @@ This function performs the outbound HTTP GET request.
 It uses the injected httpClient.
 */
 func (c *currencyClient) httpRequestFunction(fullURL string) ([]byte, error) {
+	if err := c.limiter.Wait(context.Background()); err != nil {
+		return nil, err
+	}
+
 	resp, err := c.httpClient.Get(fullURL)
 	if err != nil {
 		return nil, err

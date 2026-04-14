@@ -1,12 +1,15 @@
 package client
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"golang.org/x/time/rate"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 type WeatherClient interface {
@@ -15,11 +18,13 @@ type WeatherClient interface {
 
 type weatherClient struct {
 	httpClient *http.Client
+	limiter    *rate.Limiter
 }
 
 func NewWeatherClient(httpClient *http.Client) WeatherClient {
 	return &weatherClient{
 		httpClient: httpClient,
+		limiter:    rate.NewLimiter(rate.Every(1*time.Second), 1),
 	}
 }
 
@@ -170,6 +175,10 @@ This function performs the outbound HTTP GET request.
 It should use the injected httpClient.
 */
 func (c *weatherClient) httpRequestFunction(fullURL string) ([]byte, error) {
+	if err := c.limiter.Wait(context.Background()); err != nil {
+		return nil, err
+	}
+
 	resp, err := c.httpClient.Get(fullURL)
 	if err != nil {
 		return nil, err

@@ -5,6 +5,7 @@ import (
 	store "assignment-2/internal/store"
 	utils "assignment-2/internal/utils"
 	"context"
+	"strings"
 
 	"log"
 	"net/http"
@@ -22,6 +23,11 @@ func main() {
 
 	if !fileExists(credFile) {
 		log.Panic("Firebase credentials file not found or not mounted")
+	}
+
+	openAQAPIKey := os.Getenv("OPENAQ_API_KEY")
+	if strings.TrimSpace(openAQAPIKey) == "" {
+		log.Panic("OPENAQ_API_KEY is not set")
 	}
 
 	client, err := firestore.NewClient(ctx, "cachemea2",
@@ -48,6 +54,7 @@ func main() {
 		restCountriesHTTPClient := utils.NewHttpClient()
 		restCountriesClient := client.NewRestCountriesClient(restCountriesHTTPClient)
 		h := handler.NewHandler(nil, restCountriesClient)
+		openAQClient := aqclient.NewOpenAQClient(httpClient, openAQAPIKey)
 	*/
 
 	// Extract PORT variable from the OS environment variables
