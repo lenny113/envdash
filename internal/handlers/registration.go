@@ -57,7 +57,7 @@ func (h *Handler) RegistrationPostHandler(w http.ResponseWriter, r *http.Request
 	apiKey := getAndHashAPIKey(r)
 
 	//Checking if the hashed APIKey exists in firestore
-	if !(h.store.APIKeyExists)(r.Context(), apiKey) {
+	if !(h.store.ApiKeyExists)(r.Context(), apiKey) {
 		writeJSONError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
@@ -111,6 +111,7 @@ func (h *Handler) RegistrationPostHandler(w http.ResponseWriter, r *http.Request
 
 	//Writing response body for the user
 	json.NewEncoder(w).Encode(response)
+	h.CheckLifecycleNotifications(r.Context(), reg.IsoCode, "REGISTER")
 
 }
 
@@ -211,7 +212,7 @@ func (h *Handler) RegistrationGetHandler(w http.ResponseWriter, r *http.Request)
 	apiKey := getAndHashAPIKey(r)
 
 	//Cheking if the hashed api key exists in firestore
-	if !(h.store.APIKeyExists)(r.Context(), apiKey) {
+	if !(h.store.ApiKeyExists)(r.Context(), apiKey) {
 		//Writing JSON error to user with status 401 UNAUTHORIZED
 		writeJSONError(w, http.StatusUnauthorized, "unauthorized")
 		return
@@ -232,6 +233,9 @@ func (h *Handler) RegistrationGetHandler(w http.ResponseWriter, r *http.Request)
 		if err != nil {
 			utils.SetMessageForLogger(w, err.Error())
 		}
+
+		//to send notification that a reg of this country is fetched
+		h.CheckLifecycleNotifications(r.Context(), registration.IsoCode, "INVOKE") //we have to know what country, then send notifications
 
 		enc := json.NewEncoder(w)
 
@@ -261,7 +265,7 @@ func (h *Handler) RegistrationPutHandler(w http.ResponseWriter, r *http.Request)
 	apiKey := getAndHashAPIKey(r)
 
 	//Checking if hashed apikey exists in firestore
-	if !(h.store.APIKeyExists)(r.Context(), apiKey) {
+	if !(h.store.ApiKeyExists)(r.Context(), apiKey) {
 		//Writing JSON error to user with status 401 UNAUTHORIZED
 		writeJSONError(w, http.StatusUnauthorized, "unauthorized")
 		return
@@ -311,6 +315,8 @@ func (h *Handler) RegistrationPutHandler(w http.ResponseWriter, r *http.Request)
 
 	//Encoding the new registration for the user
 	json.NewEncoder(w).Encode(reg)
+	//Sending lifecycle notification for update of registration, we have to know the country of the registration to send the correct notifications
+	h.CheckLifecycleNotifications(r.Context(), reg.IsoCode, "UPDATE")
 }
 
 // RegistrationDeleteHandler handles the deletion of a registration with a given id
@@ -327,14 +333,21 @@ func (h *Handler) RegistrationDeleteHandler(w http.ResponseWriter, r *http.Reque
 	apiKey := getAndHashAPIKey(r)
 
 	//Check if hashed apikey exists in firestore
-	if !(h.store.APIKeyExists)(r.Context(), apiKey) {
+	if !(h.store.ApiKeyExists)(r.Context(), apiKey) {
 		//Writing JSON error to user with status UNAUTHORIZED
 		writeJSONError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
+	//For notification purposes we need to know the registration before deleting
+	reg, err := h.store.GetRegistration(r.Context(), apiKey, id)
+	if err != nil {
+		writeJSONError(w, http.StatusNotFound, "Registration not found")
+		return
+	}
+	RegistrationIso := reg.IsoCode
 	//Deleting specified registration from firestore if found under provided apikey
-	err := h.store.DeleteRegistration(r.Context(), apiKey, id)
+	err = h.store.DeleteRegistration(r.Context(), apiKey, id)
 	if err != nil {
 		utils.SetMessageForLogger(w, err.Error())
 		//Writing JSON error to user with status 404 NOT FOUND
@@ -347,6 +360,9 @@ func (h *Handler) RegistrationDeleteHandler(w http.ResponseWriter, r *http.Reque
 	w.Header().Set("Content-Type", "application/json")                      //Setting content type
 	w.WriteHeader(http.StatusNoContent)                                     // Set HTTP status code to 204 NO CONTENT
 	w.Write([]byte("Registration with id " + id + " successfully deleted")) //Writing result to user
+
+	//Sending lifecycle notification for deletion of registration, we have to know the country of the registration to send the correct notifications
+	h.CheckLifecycleNotifications(r.Context(), RegistrationIso, "DELETE")
 }
 
 // RegistrationHeadHandler handles gets the head of the response when querying for one or all registrations
@@ -359,7 +375,7 @@ func (h *Handler) RegistrationHeadHandler(w http.ResponseWriter, r *http.Request
 	apiKey := getAndHashAPIKey(r)
 
 	//Check if the API key exists in firestore
-	if !(h.store.APIKeyExists)(r.Context(), apiKey) {
+	if !(h.store.ApiKeyExists)(r.Context(), apiKey) {
 		writeJSONError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
@@ -416,7 +432,7 @@ func (h *Handler) RegistrationPatchHandler(w http.ResponseWriter, r *http.Reques
 	apiKey := getAndHashAPIKey(r)
 
 	//Check if APIkey exists in firestore
-	if !(h.store.APIKeyExists)(r.Context(), apiKey) {
+	if !(h.store.ApiKeyExists)(r.Context(), apiKey) {
 		//Writing JSON error if APIKEY is not found with HTTP status code "401 UNAUTHORIZED"
 		writeJSONError(w, http.StatusUnauthorized, "unauthorized")
 		return
@@ -476,6 +492,7 @@ func (h *Handler) RegistrationPatchHandler(w http.ResponseWriter, r *http.Reques
 	utils.SetMessageForLogger(w, "patched "+id)
 
 	w.WriteHeader(http.StatusNoContent) //set HTTP status code to 204 "NO CONTENT"
+	h.CheckLifecycleNotifications(r.Context(), updated.IsoCode, "UPDATE")
 }
 
 // Extract id from path
