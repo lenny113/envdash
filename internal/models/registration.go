@@ -20,3 +20,35 @@ type Features struct {
 	Area             bool     `json:"area" firestore:"area"`
 	TargetCurrencies []string `json:"targetCurrencies" firestore:"targetCurrencies"`
 }
+
+//Defintion of response when asking external api for countryname and isocode that will be used for validation
+
+type CountryNameAndISO struct {
+	CCA2 string `json:"cca2"`
+	Name struct {
+		Common   string `json:"common"`
+		Official string `json:"official"`
+	} `json:"name"`
+}
+
+// patch from user, where any field can be empty or have a value
+type RegistrationPatch struct {
+	Country  *string `json:"country,omitempty"`
+	IsoCode  *string `json:"isoCode,omitempty"`
+	Features *struct {
+		Temperature      *bool     `json:"temperature,omitempty"`
+		Precipitation    *bool     `json:"precipitation,omitempty"`
+		AirQuality       *bool     `json:"airQuality,omitempty"`
+		Capital          *bool     `json:"capital,omitempty"`
+		Coordinates      *bool     `json:"coordinates,omitempty"`
+		Population       *bool     `json:"population,omitempty"`
+		Area             *bool     `json:"area,omitempty"`
+		TargetCurrencies *[]string `json:"targetCurrencies,omitempty"`
+	} `json:"features,omitempty"`
+}
+
+// Struct to store the currencyAPI response for valdiation
+type CurrencyAPIResponse struct {
+	Result string             `json:"result"`
+	Rates  map[string]float64 `json:"rates"`
+}

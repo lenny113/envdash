@@ -86,6 +86,7 @@ func main() {
 
 	// Configure the HTTP server with the network address and
 	// the router wrapped in logging middleware.
+	router.HandleFunc(utils.REGISTRATION_PATH, h.RegistrationHandler)
 	server := http.Server{
 		Addr:    ":" + port,
 		Handler: utils.Logging(router),

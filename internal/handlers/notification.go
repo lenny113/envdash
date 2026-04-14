@@ -332,7 +332,8 @@ func (h *Handler) CheckLifecycleNotifications(ctx context.Context, country strin
 		utils.SetMessageForLogger(nil, "No notifications found in database")
 		return
 	}
-
+	//to handle anny formating errors with country codes, we convert to uppercase
+	country = strings.ToUpper(country)
 	for _, notification := range allNotifications {
 		countryMatch := notification.Country == "" || notification.Country == country
 		eventMatch := notification.Event == event
@@ -442,11 +443,12 @@ func postWebhook(url string, payload map[string]interface{}) error {
 	return nil
 }
 
-func (h *Handler) GetRegWithOnlyIdForNotification(ctx context.Context, id string, event string) {
+func (h *Handler) GetRegWithOnlyIdForNotification(ctx context.Context, apiKey string, id string, event string) {
 	//This function will be called right before a registration is deleted
 
 	//first it gets what country this registration is for
-	registration, err := h.store.GetRegistration(ctx, id)
+	//TODO FIX
+	registration, err := h.store.GetRegistration(ctx, apiKey, id)
 	if err != nil {
 		//utils.SetMessageForLogger(w, "Error fetching registration from database", err)
 		return

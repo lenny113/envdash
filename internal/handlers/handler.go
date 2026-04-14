@@ -9,19 +9,19 @@ import (
 )
 
 type Handler struct {
-	store               *store.Store // firestore
+	store               store.FireStore // firestore
 	restCountriesClient client.RestCountriesClient
 }
 
-func NewHandler(s *store.Store, restCountriesClient client.RestCountriesClient) *Handler {
+func NewHandler(s store.FireStore, restCountriesClient client.RestCountriesClient) *Handler {
 	return &Handler{
 		store:               s,
 		restCountriesClient: restCountriesClient,
 	}
 }
 
-func NewFirestoreHandler(s *store.Store) *Handler {
-	return &Handler{store: s}
+func NewFirestoreHandler(s *store.FireStore) *Handler {
+	return &Handler{store: *s}
 }
 func writeJSONError(w http.ResponseWriter, code int, errMsg string) {
 	// Create an instance of the custom error struct

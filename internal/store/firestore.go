@@ -2,28 +2,48 @@ package store
 
 import (
 	model "assignment-2/internal/models"
-	"cloud.google.com/go/firestore"
 	"context"
-	"crypto/sha256" //hash api key for database
-	"encoding/hex"  //for converting hash to string
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"reflect"
+	"strings"
+	"time"
+
+	"cloud.google.com/go/firestore"
 	"google.golang.org/api/iterator"
 )
 
-type Store struct {
+// FireStore wraps the Firestore client and provides methods
+// for interacting with data in firestore
+type FireStore struct {
 	client *firestore.Client
 }
 
-func NewFirestoreStore(client *firestore.Client) *Store {
-	return &Store{client: client}
+// NewFirestoreStore initializes a new firestore instance with the
+// provided Firestore client
+func NewFirestoreStore(client *firestore.Client) *FireStore {
+	return &FireStore{client: client}
 }
 
-func (f *Store) CreateRegistration(ctx context.Context, reg model.Registration) (string, error) {
+// CreateRegistration stores a new registration under an API key.
+// A document id is generated automatically by firestore and assigned to the registratrion
+//
+// Returns:
+// - string: generated document ID
+// - error:  if the operation fails
+func (f *FireStore) CreateRegistration(ctx context.Context, apiKey string, reg model.Registration) (string, error) {
 
-	doc := f.client.Collection("registrations").NewDoc()
+	// Navigate to user_registrations subcollection
+	col := f.client.Collection("registrations").Doc(apiKey).Collection("user_registrations")
 
+	//generate new doc reference per auto-ID
+	doc := col.NewDoc()
+
+	//assign generated id to the document
 	reg.ID = doc.ID
 
+	//store registration in firestore
 	_, err := doc.Set(ctx, reg)
 	if err != nil {
 		return "", err
@@ -31,6 +51,49 @@ func (f *Store) CreateRegistration(ctx context.Context, reg model.Registration) 
 
 	return doc.ID, nil
 }
+
+// GetRegistration retrieves a single registration by ID
+//
+// Returns:
+// - *model.Registration: the requested registration
+// - error: if the document does not exist or decoding fails
+func (f *FireStore) GetRegistration(ctx context.Context, apiKey string, id string) (*model.Registration, error) {
+	doc, err := f.client.Collection("registrations").
+		Doc(apiKey).
+		Collection("user_registrations").
+		Doc(id).
+		Get(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var reg model.Registration
+	if err := doc.DataTo(&reg); err != nil {
+		return nil, err
+	}
+
+	// Include the document ID
+	reg.ID = doc.Ref.ID
+	return &reg, nil
+}
+
+/*
+func (f *FireStore) GetRegistrationForNotification(ctx context.Context, id string) (*model.Registration, error) {
+	doc, err := f.client.Collection("registrations").Doc(id).Get(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var reg model.Registration
+	if err := doc.DataTo(&reg); err != nil {
+		return nil, err
+	}
+
+	// Include the document ID
+	reg.ID = doc.Ref.ID
+
+	return &reg, nil
+}*/
 
 /*
 You may want to use this function to check is API key gives acces.
@@ -47,7 +110,7 @@ This method is part of the Store struct, which holds the Firestore client.
 @apiKey			-the key you want to check
 @return bool	-if api key exists:true, if not in Firestore:false
 */
-func (f *Store) ApiKeyExists(ctx context.Context, apiKey string) bool {
+func (f *FireStore) ApiKeyExists(ctx context.Context, apiKey string) bool {
 	hashedApiKey := hashAPIKey(apiKey)
 	_, err := f.client.
 		Collection("all_api_keys").
@@ -84,7 +147,7 @@ This method is part of the Store struct, which holds the Firestore client.
 @param reg 		- struct of all data that we want to store (api key gets hashed)
 @return error 	- if anny errors cam when storing api key in firestore, if nil, the keys were stored!
 */
-func (f *Store) CreateApiStorage(ctx context.Context, reg model.Authentication) error {
+func (f *FireStore) CreateApiStorage(ctx context.Context, reg model.Authentication) error {
 	//first hashes api key generated:
 	hashedApiKey := hashAPIKey(reg.ApiKey)
 	//setts api
@@ -121,7 +184,7 @@ This method is part of the Store struct, which holds the Firestore client.
 @return int	-Return if anny, how manny Api's this user have registerd in Firestore, 0 if error
 return error-Returns anny error and dont complete the function
 */
-func (h *Store) CountApiPerUser(ctx context.Context, email string) (int, error) {
+func (h *FireStore) CountApiPerUser(ctx context.Context, email string) (int, error) {
 	//getting info about spesific email
 	EmailDoc := h.client.Collection("users").Doc(email)
 	//seeing how manny api keys that user hve
@@ -152,7 +215,7 @@ This method is part of the Store struct, which holds the Firestore client.
 @param apiKey	-api key from the user
 @return error	-returns error if something goes wrong, example: wrong format stored in Firestore
 */
-func (f *Store) DeleteAPIkey(ctx context.Context, apiKey string) error {
+func (f *FireStore) DeleteAPIkey(ctx context.Context, apiKey string) error {
 	apiKeyHashed := hashAPIKey(apiKey)
 	docRef := f.client.Collection("all_api_keys").Doc(apiKeyHashed)
 
@@ -205,7 +268,7 @@ func hashAPIKey(apiKeyUnhashed string) string {
 	return apiKeyHashedString
 }
 
-func (f *Store) FindUserWithApiKey(ctx context.Context, apiKey string) (string, error) {
+func (f *FireStore) FindUserWithApiKey(ctx context.Context, apiKey string) (string, error) {
 	apiKeyHashed := hashAPIKey(apiKey)
 	docRef := f.client.Collection("all_api_keys").Doc(apiKeyHashed)
 
@@ -223,29 +286,22 @@ func (f *Store) FindUserWithApiKey(ctx context.Context, apiKey string) (string, 
 	return userMail, nil
 }
 
-func (f *Store) GetRegistration(ctx context.Context, id string) (*model.Registration, error) {
-	doc, err := f.client.Collection("registrations").Doc(id).Get(ctx)
-	if err != nil {
-		return nil, err
-	}
+// GetAllRegistrations retrieves all registrations associated with an API key.
+//
+// Returns:
+// - []model.Registration: list of registrations
+// - error: if iteration or decoding fails
+func (f *FireStore) GetAllRegistrations(ctx context.Context, apiKey string) ([]model.Registration, error) {
+	iter := f.client.Collection("registrations").
+		Doc(apiKey).
+		Collection("user_registrations").
+		Documents(ctx)
 
-	var reg model.Registration
-	if err := doc.DataTo(&reg); err != nil {
-		return nil, err
-	}
-
-	// Include the document ID
-	reg.ID = doc.Ref.ID
-
-	return &reg, nil
-}
-
-func (f *Store) GetAllRegistrations(ctx context.Context) ([]model.Registration, error) {
-	iter := f.client.Collection("registrations").Documents(ctx)
 	defer iter.Stop()
 
 	var registrations []model.Registration
 
+	// Iterate through all documents in collection
 	for {
 		doc, err := iter.Next()
 		if err != nil {
@@ -256,10 +312,9 @@ func (f *Store) GetAllRegistrations(ctx context.Context) ([]model.Registration, 
 		}
 
 		var reg model.Registration
-		if err := doc.DataTo(&reg); err != nil {
-			return nil, err
-		}
+		doc.DataTo(&reg)
 
+		// Include the document ID
 		reg.ID = doc.Ref.ID
 
 		registrations = append(registrations, reg)
@@ -268,29 +323,30 @@ func (f *Store) GetAllRegistrations(ctx context.Context) ([]model.Registration, 
 	return registrations, nil
 }
 
-func (f *Store) UpdateRegistration(ctx context.Context, id string, reg model.Registration) error {
-
-	docRef := f.client.Collection("registrations").Doc(id)
-
-	// Check if exists
-	_, err := docRef.Get(ctx)
+// UpdateRegistration replaces an existing registration entirely.
+//
+// NOTE: This performs a full overwrite of the document.
+func (f *FireStore) UpdateRegistration(ctx context.Context, apiKey string, id string, reg model.Registration) error {
+	docRef := f.client.Collection("registrations").
+		Doc(apiKey).
+		Collection("user_registrations").
+		Doc(id)
+	_, err := docRef.Set(ctx, reg)
 	if err != nil {
 		return err
 	}
+	// Overwrites the entire document
 
-	reg.ID = id
-
-	_, err = docRef.Set(ctx, reg) // replaces entire document
-	if err != nil {
-		return err
-	}
-
-	return nil
+	_, err = docRef.Set(ctx, reg)
+	return err
 }
 
-func (f *Store) DeleteRegistration(ctx context.Context, id string) error {
+// DeleteRegistration removes a registration by ID.
+//
+// Returns error if the document does not exist or deletion fails.
+func (f *FireStore) DeleteRegistration(ctx context.Context, apiKey string, id string) error {
 
-	docRef := f.client.Collection("registrations").Doc(id)
+	docRef := f.client.Collection("registrations").Doc(apiKey).Collection("user_registrations").Doc(id)
 
 	// check if exists
 	_, err := docRef.Get(ctx)
@@ -302,6 +358,89 @@ func (f *Store) DeleteRegistration(ctx context.Context, id string) error {
 	return err
 }
 
+// TweakRegistration performs a partial update (PATCH) on a registration.
+//
+// Only fields provided in the patch object are updated.
+// Uses Firestore's Update() to modify specific fields instead of overwriting.
+//
+// Supports nested updates for the "features" object using reflection.
+func (f *FireStore) TweakRegistration(
+	ctx context.Context,
+	apiKey string,
+	id string,
+	patch model.RegistrationPatch,
+) error {
+
+	docRef := f.client.Collection("registrations").
+		Doc(apiKey).
+		Collection("user_registrations").
+		Doc(id)
+
+	var updates []firestore.Update
+
+	// Handle top-level fields
+	if patch.Country != nil {
+		updates = append(updates, firestore.Update{
+			Path:  "country",
+			Value: *patch.Country,
+		})
+	}
+
+	if patch.IsoCode != nil {
+		updates = append(updates, firestore.Update{
+			Path:  "isoCode",
+			Value: *patch.IsoCode,
+		})
+	}
+
+	// Handle nested "features" fields dynamically using reflection
+
+	if patch.Features != nil {
+		v := reflect.ValueOf(*patch.Features)
+		t := reflect.TypeOf(*patch.Features)
+
+		for i := 0; i < v.NumField(); i++ {
+			fieldValue := v.Field(i)
+			fieldType := t.Field(i)
+
+			// Skip nil pointers safely
+			if fieldValue.Kind() == reflect.Ptr && fieldValue.IsNil() {
+				continue
+			}
+
+			// Extract JSON tag to match Firestore field naming
+			jsonTag := fieldType.Tag.Get("json")
+			if jsonTag == "" {
+				continue
+			}
+			jsonTag = strings.Split(jsonTag, ",")[0]
+
+			// Extract actual value (handle pointer vs non-pointer)
+			var value interface{}
+			if fieldValue.Kind() == reflect.Ptr {
+				value = fieldValue.Elem().Interface()
+			} else {
+				value = fieldValue.Interface()
+			}
+			// Append nested field update (e.g., "features.temperature")
+			updates = append(updates, firestore.Update{
+				Path:  "features." + jsonTag,
+				Value: value,
+			})
+		}
+	}
+
+	// Update timestamp
+	updates = append(updates, firestore.Update{
+		Path:  "lastChange",
+		Value: time.Now().Format("20060102 15:04"),
+	})
+
+	// Execute partial update
+	_, err := docRef.Update(ctx, updates)
+	return err
+}
+
 // function to change a specific part/parts of a registration with use of the patch method
 //func (f *Store) TweakRegistration(ctx context.Context) error {}
 
@@ -310,7 +449,7 @@ func (f *Store) DeleteRegistration(ctx context.Context, id string) error {
 //****************************************************************************************************************//
 
 // stores notification in Firestore, this is used when a user register a webhook, and we want to store this in database
-func (f *Store) CreateNotification(ctx context.Context, notification model.RegisterWebhook, apiKey string) (string, error) {
+func (f *FireStore) CreateNotification(ctx context.Context, notification model.RegisterWebhook, apiKey string) (string, error) {
 
 	//finding the user this api key is registerd to
 
@@ -342,7 +481,7 @@ func (f *Store) CreateNotification(ctx context.Context, notification model.Regis
 	return docRef.ID, nil
 }
 
-func (f *Store) GetSpecificNotification(ctx context.Context, id string) (model.AllRegisteredWebhook, *firestore.DocumentRef, error) {
+func (f *FireStore) GetSpecificNotification(ctx context.Context, id string) (model.AllRegisteredWebhook, *firestore.DocumentRef, error) {
 
 	docRef := f.client.Collection("all_notifications").Doc(id)
 
@@ -365,7 +504,7 @@ func (f *Store) GetSpecificNotification(ctx context.Context, id string) (model.A
 
 }
 
-func (f *Store) GetAllNotifications(ctx context.Context) ([]model.AllRegisteredWebhook, error) {
+func (f *FireStore) GetAllNotifications(ctx context.Context) ([]model.AllRegisteredWebhook, error) {
 	iter := f.client.Collection("all_notifications").Documents(ctx)
 	defer iter.Stop()
 
@@ -394,7 +533,7 @@ func (f *Store) GetAllNotifications(ctx context.Context) ([]model.AllRegisteredW
 	return result, nil
 }
 
-func (f *Store) GetAllNotificationsForUser(ctx context.Context, apiKey string) ([]model.AllRegisteredWebhook, error) {
+func (f *FireStore) GetAllNotificationsForUser(ctx context.Context, apiKey string) ([]model.AllRegisteredWebhook, error) {
 	// Finn email fra api-nøkkelen
 	userEmail, err := f.FindUserWithApiKey(ctx, apiKey)
 	if err != nil {
@@ -432,7 +571,7 @@ func (f *Store) GetAllNotificationsForUser(ctx context.Context, apiKey string) (
 	return result, nil
 }
 
-func (f *Store) DeleteNotification(ctx context.Context, id string, apiKey string) error {
+func (f *FireStore) DeleteNotification(ctx context.Context, id string, apiKey string) error {
 
 	//check if notification exists
 	notification, WhereDocIsStored, err := f.GetSpecificNotification(ctx, id)
