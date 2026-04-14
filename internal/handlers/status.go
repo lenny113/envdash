@@ -8,6 +8,7 @@ import (
 	utils "assignment-2/internal/utils"
 	"encoding/json"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -23,6 +24,11 @@ type StatusHandler struct {
 	currencyClient currencyclient.CurrencyClient
 	store          StatusStore
 	startedAt      time.Time
+
+	mu           sync.Mutex
+	cached       *StatusResponse
+	lastRefresh  time.Time
+	refreshEvery time.Duration
 }
 
 type StatusResponse struct {
@@ -51,10 +57,24 @@ func NewStatusHandler(
 		currencyClient: currencyClient,
 		store:          store,
 		startedAt:      startedAt,
+		refreshEvery:   5 * time.Second,
 	}
 }
 
 func (h *StatusHandler) GetStatus(w http.ResponseWriter, r *http.Request) {
+	h.mu.Lock()
+	if h.cached != nil && time.Since(h.lastRefresh) < h.refreshEvery {
+		resp := *h.cached
+		resp.Uptime = int64(time.Since(h.startedAt).Seconds())
+		h.mu.Unlock()
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(resp)
+		return
+	}
+	h.mu.Unlock()
+
 	resp := StatusResponse{
 		CountriesAPI:   probeCountriesAPI(h.countryClient),
 		MeteoAPI:       probeMeteoAPI(h.weatherClient),
@@ -66,10 +86,10 @@ func (h *StatusHandler) GetStatus(w http.ResponseWriter, r *http.Request) {
 		Uptime:         int64(time.Since(h.startedAt).Seconds()),
 	}
 
-	if h.store != nil {
-		resp.NotificationDB = h.store.NotificationDBStatus()
-		resp.Webhooks = h.store.WebhookCount()
-	}
+	h.mu.Lock()
+	h.cached = &resp
+	h.lastRefresh = time.Now()
+	h.mu.Unlock()
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
