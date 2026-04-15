@@ -3,7 +3,6 @@ package handlers
 import (
 	model "assignment-2/internal/models"
 	"assignment-2/internal/utils"
-	//"assignment-2/internal/store"
 	"crypto/md5"   //for generarting hash to create api key
 	"encoding/hex" //for converting md5 hash to string
 	"encoding/json"
@@ -183,25 +182,35 @@ func (h *Handler) DeleteAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	API := r.PathValue("id")
+	ApiToDelete := r.PathValue("id")
 
-	if API == "" {
+	if ApiToDelete == "" {
 		utils.SetMessageForLogger(w, "DELETE_AUTH_FAIL: missing id param")
 		writeJSONError(w, http.StatusBadRequest, "missing id")
 		return
 	}
 
 	//Checks if api key exists
-	if !h.store.ApiKeyExists(ctx, API) {
+	if !h.store.ApiKeyExists(ctx, ApiToDelete) {
 		writeJSONError(w, http.StatusNotFound, "could not find API key")
 		utils.SetMessageForLogger(w, "could not find API key")
 		return
 	}
-
+	ApiUserAuth := r.Header.Get("X-Api-Key")
 	//we have to delete this key in firestore
-	err := h.store.DeleteAPIkey(ctx, API)
+	err := h.store.DeleteAPIkey(ctx, ApiToDelete, ApiUserAuth)
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "something went wrong in Firestore, while trying to delete apikey")
+
+		if err.Error() == "api key not found" {
+			writeJSONError(w, http.StatusNotFound, "Api key not found")
+
+		} else if err.Error() == "unauthorized" {
+			writeJSONError(w, http.StatusForbidden, "Not allowed to delete someone else's api key!")
+
+		} else {
+			writeJSONError(w, http.StatusInternalServerError, "Something went wrong when deleting api key")
+		}
+
 		messageForLogger := "Problem in firestore, while trying to delete apikey: " + err.Error()
 		utils.SetMessageForLogger(w, messageForLogger)
 		return

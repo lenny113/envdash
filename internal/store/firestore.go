@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -218,14 +219,18 @@ This method is part of the Store struct, which holds the Firestore client.
 @param apiKey	-api key from the user
 @return error	-returns error if something goes wrong, example: wrong format stored in Firestore
 */
-func (f *FireStore) DeleteAPIkey(ctx context.Context, apiKey string) error {
-	apiKeyHashed := hashAPIKey(apiKey)
+func (f *FireStore) DeleteAPIkey(ctx context.Context, apiKeyToDelete string, requestApiKey string) error {
+	apiKeyHashed := hashAPIKey(apiKeyToDelete)
 	docRef := f.client.Collection("all_api_keys").Doc(apiKeyHashed)
+
+	//error definitions:
+	ErrNotFound := errors.New("api key not found")
+	ErrUnauthorized := errors.New("unauthorized")
 
 	// check if exists
 	docSnap, err := docRef.Get(ctx)
 	if err != nil {
-		return err
+		return ErrNotFound
 	}
 
 	//Finds mail to this user that this api is registerd under
@@ -233,8 +238,17 @@ func (f *FireStore) DeleteAPIkey(ctx context.Context, apiKey string) error {
 
 	userMail, ok := data["user"].(string)
 	if !ok {
-		//TODO: log this in logg file
-		return fmt.Errorf("Cant get email, user field missing or not a string (Firestore)")
+		return fmt.Errorf("invalid user field in firestore")
+	}
+
+	requestUser, err := f.FindUserWithApiKey(ctx, requestApiKey)
+	if err != nil {
+		return err
+	}
+
+	//if the user that made the request is not the same as the the api key, unauthorized
+	if requestUser != userMail {
+		return ErrUnauthorized
 	}
 
 	//delete api under "ALL_API_KEYS"
@@ -448,7 +462,7 @@ func (f *FireStore) TweakRegistration(
 //func (f *Store) TweakRegistration(ctx context.Context) error {}
 
 //****************************************************************************************************************//
-//											 Notification storage functions
+//											 Notification database functions
 //****************************************************************************************************************//
 
 // stores notification in Firestore, this is used when a user register a webhook, and we want to store this in database
@@ -612,6 +626,10 @@ func (f *FireStore) DeleteNotification(ctx context.Context, id string, apiKey st
 	//if no error, notification is deleted in both places, return nil
 	return nil
 }
+
+//****************************************************************************************************************//
+//											 Status database functions
+//****************************************************************************************************************//
 
 func (f *FireStore) DB_Status(ctx context.Context) bool {
 	colelction := f.client.Collection("healthcheck")
