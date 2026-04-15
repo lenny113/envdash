@@ -111,7 +111,7 @@ func (h *Handler) RegistrationPostHandler(w http.ResponseWriter, r *http.Request
 
 	//Writing response body for the user
 	json.NewEncoder(w).Encode(response)
-	h.CheckLifecycleNotifications(r.Context(), reg.IsoCode, "REGISTER")
+	h.CheckLifecycleNotifications(r.Context(), resolveIsoCode(reg.IsoCode, reg.Country), "REGISTER")
 
 }
 
@@ -345,6 +345,7 @@ func (h *Handler) RegistrationDeleteHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	RegistrationIso := reg.IsoCode
+	RegistrationCountry := reg.Country
 	//Deleting specified registration from firestore if found under provided apikey
 	err = h.store.DeleteRegistration(r.Context(), apiKey, id)
 	if err != nil {
@@ -361,7 +362,7 @@ func (h *Handler) RegistrationDeleteHandler(w http.ResponseWriter, r *http.Reque
 	w.Write([]byte("Registration with id " + id + " successfully deleted")) //Writing result to user
 
 	//Sending lifecycle notification for deletion of registration, we have to know the country of the registration to send the correct notifications
-	h.CheckLifecycleNotifications(r.Context(), RegistrationIso, "DELETE")
+	h.CheckLifecycleNotifications(r.Context(), resolveIsoCode(RegistrationIso, RegistrationCountry), "DELETE")
 }
 
 // RegistrationHeadHandler handles gets the head of the response when querying for one or all registrations
@@ -491,7 +492,7 @@ func (h *Handler) RegistrationPatchHandler(w http.ResponseWriter, r *http.Reques
 	utils.SetMessageForLogger(w, "patched "+id)
 
 	w.WriteHeader(http.StatusNoContent) //set HTTP status code to 204 "NO CONTENT"
-	h.CheckLifecycleNotifications(r.Context(), updated.IsoCode, "UPDATE")
+	h.CheckLifecycleNotifications(r.Context(), resolveIsoCode(updated.IsoCode, updated.Country), "CHANGE")
 }
 
 // Extract id from path

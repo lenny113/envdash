@@ -335,7 +335,7 @@ func (h *Handler) CheckLifecycleNotifications(ctx context.Context, country strin
 	//to handle anny formating errors with country codes, we convert to uppercase
 	country = strings.ToUpper(country)
 	for _, notification := range allNotifications {
-		countryMatch := notification.Country == "" || strings.ToUpper(notification.Country) == strings.ToUpper(country)
+		countryMatch := notification.Country == "" || strings.EqualFold(notification.Country, country)
 		eventMatch := notification.Event == event
 
 		if countryMatch && eventMatch {
@@ -356,7 +356,7 @@ func (h *Handler) CheckThresholdNotifications(ctx context.Context, country strin
 	}
 
 	for _, notification := range allNotifications {
-		countryMatch := notification.Country == "" || strings.ToUpper(notification.Country) == strings.ToUpper(country)
+		countryMatch := notification.Country == "" || strings.EqualFold(notification.Country, country)
 		eventMatch := notification.Event == "THRESHOLD"
 		threshold := notification.ThresholdNotification
 		if countryMatch && eventMatch && threshold != nil {
@@ -454,4 +454,25 @@ func (h *Handler) GetRegWithOnlyIdForNotification(ctx context.Context, apiKey st
 		return
 	}
 	h.CheckLifecycleNotifications(ctx, registration.IsoCode, event)
+}
+
+func resolveIsoCode(isoCode string, country string) string {
+	if isoCode != "" {
+		return strings.ToUpper(isoCode)
+	}
+	if country == "" {
+		//then we have ISO code
+		return ""
+	}
+	// get the map with all names and iso codes
+	cMap, err := getCountryNameAndIsoMap()
+	if err != nil {
+		return ""
+	}
+	for iso, name := range cMap {
+		if strings.EqualFold(name, country) {
+			return iso
+		}
+	}
+	return ""
 }
