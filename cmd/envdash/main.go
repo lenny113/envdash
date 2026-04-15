@@ -96,20 +96,20 @@ func main() {
 	//initializing router
 	router := http.NewServeMux()
 
-	//public routes:
-	router.HandleFunc(utils.AUTHENTICATION_PATH, h.RegisterAuth)
-	router.HandleFunc(utils.AUTHENTICATION_PATH+"/", h.RegisterAuth)
+	//Public routes:
+	///Auth
+	router.HandleFunc(utils.AUTHENTICATION_PATH, h.Auth)
+	router.HandleFunc(utils.AUTHENTICATION_PATH+"/", h.Auth)
+	router.HandleFunc(utils.AUTHENTICATION_PATH+"/{id}", h.Auth)
+	router.HandleFunc(utils.AUTHENTICATION_PATH+"/{id}"+"/", h.Auth)
+	///Status
 	router.HandleFunc(utils.STATUS_PATH, statusHandler.GetStatus)
 	router.HandleFunc(utils.STATUS_PATH+"/", statusHandler.GetStatus)
 
 	//Private routes (api check in middelware)
 	privateRouter := http.NewServeMux()
 	privateRouter.HandleFunc("/", handler.DefaultHandler)
-	///Auth
-	privateRouter.HandleFunc(utils.AUTHENTICATION_PATH, h.RegisterAuth)
-	privateRouter.HandleFunc(utils.AUTHENTICATION_PATH+"/", h.RegisterAuth)
-	privateRouter.HandleFunc(utils.AUTHENTICATION_PATH+"/{id}", h.DeleteAuth)
-	privateRouter.HandleFunc(utils.AUTHENTICATION_PATH+"/{id}"+"/", h.DeleteAuth)
+
 	///Notification
 	privateRouter.HandleFunc(utils.NOTIFICATION_PATH, h.NotificationSpinner)
 	privateRouter.HandleFunc(utils.NOTIFICATION_PATH+"/", h.NotificationSpinner)

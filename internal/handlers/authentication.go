@@ -21,6 +21,16 @@ type Key struct {
 	CreatedAt string `json:"createdAt"`
 }
 
+func (h *Handler) Auth(w http.ResponseWriter, r *http.Request) {
+	PathValue := r.PathValue("id")
+	if PathValue == "" {
+		h.RegisterAuth(w, r)
+		return
+	} else {
+		h.DeleteAuth(w, r, PathValue)
+	}
+}
+
 /*
 This function is the handler for the /register endpoint, it is responsible for handling the registration of users and generating API keys for them.
 The function first checks if the request method is POST, if not, it returns a method not allowed error.
@@ -172,7 +182,7 @@ func isValidEmail(email string) bool {
 	return address != nil
 }
 
-func (h *Handler) DeleteAuth(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) DeleteAuth(w http.ResponseWriter, r *http.Request, ApiToDelete string) {
 	//used in handling connection to Firestore
 	ctx := r.Context()
 
@@ -182,27 +192,21 @@ func (h *Handler) DeleteAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ApiToDelete := r.PathValue("id")
-
-	if ApiToDelete == "" {
-		utils.SetMessageForLogger(w, "DELETE_AUTH_FAIL: missing id param")
-		writeJSONError(w, http.StatusBadRequest, "missing id")
-		return
-	}
-
-	//Checks if api key exists
-	if !h.store.ApiKeyExists(ctx, ApiToDelete) {
-		writeJSONError(w, http.StatusNotFound, "could not find API key")
-		utils.SetMessageForLogger(w, "could not find API key")
-		return
-	}
+	//Checks if api key exists middelware can not do this because of routing issues
 	ApiUserAuth := r.Header.Get("X-Api-Key")
+	if !h.store.ApiKeyExists(ctx, ApiUserAuth) {
+		//extended message, two api keys here, so need to be carefull so the user understand
+		writeJSONError(w, http.StatusForbidden, "Looks like your api key in header are wrong")
+		utils.SetMessageForLogger(w, "api key in header are wrong")
+		return
+	}
+
 	//we have to delete this key in firestore
 	err := h.store.DeleteAPIkey(ctx, ApiToDelete, ApiUserAuth)
 	if err != nil {
 
 		if err.Error() == "api key not found" {
-			writeJSONError(w, http.StatusNotFound, "Api key not found")
+			writeJSONError(w, http.StatusNotFound, "Can not find API key you want to delete")
 
 		} else if err.Error() == "unauthorized" {
 			writeJSONError(w, http.StatusForbidden, "Not allowed to delete someone else's api key!")
