@@ -7,7 +7,6 @@ import (
 	"crypto/md5"   //for generarting hash to create api key
 	"encoding/hex" //for converting md5 hash to string
 	"encoding/json"
-	"fmt" //for writing output and testing
 	"net/http"
 	"net/mail" //for email check (private emails also accepted)
 	"time"     //time of creating api key and for generating unique api key based partly on time hash
@@ -41,7 +40,8 @@ func (h *Handler) RegisterAuth(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	if r.Method != http.MethodPost { //if not a POST request, return method not allowed
-		http.Error(w, "Only POST method allowed", http.StatusMethodNotAllowed)
+		writeJSONError(w, http.StatusMethodNotAllowed, "Only POST method allowed")
+		utils.SetMessageForLogger(w, "Method not allowed")
 		return
 	}
 
@@ -51,50 +51,73 @@ func (h *Handler) RegisterAuth(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&login)
 	if err != nil {
-		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "Invalid JSON format")
+		utils.SetMessageForLogger(w, "Invalid JSON format")
 		return
 	}
 
 	// Validate the input (check if name and email are not empty, and if email contains @)
 	if login.Email == "" || login.Name == "" {
-		http.Error(w, "Missing name or email", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "Missing name or email")
+		utils.SetMessageForLogger(w, "AUTH_REGISTER_FAIL: missing name/email")
 		return
 	}
 
 	//check if email is correctly formated (RFC 5322), if not, return bad request
 	if !isValidEmail(login.Email) {
-		http.Error(w, "Invalid email format", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "Invalid email format")
+		utils.SetMessageForLogger(w, "AUTH_REGISTER_FAIL: invalid email format")
 		return
 	}
 
 	//getting how manny api keys the user alreaddy have to confirm is they can make more
 	howMannyApiKeys, err := h.store.CountApiPerUser(ctx, login.Email)
 	if err != nil {
-		http.Error(w, "fault reaching Firestore", http.StatusInternalServerError)
+		writeJSONError(w, http.StatusInternalServerError, "Failed to reach Firestore")
+		utils.SetMessageForLogger(w, "AUTH_REGISTER_FAIL: failed to reach Firestore")
 		return
 	}
 	if (howMannyApiKeys) > utils.MAXAPIKEYS-1 {
-		http.Error(w, "To manny api keys registerd to this user, try deleting one", http.StatusTooManyRequests)
+		writeJSONError(w, http.StatusTooManyRequests, "Too many api keys registered to this user, try deleting one")
+		utils.SetMessageForLogger(w, "AUTH_REGISTER_FAIL: too many api keys registered to this user")
 		return
 	}
 
 	// Generate API key for the user
 	var createAPI, timeCreateApi string
-	//maxAttempt should be a const, but I want to ask team member or TA for what is a reasonable number
-	//max attempt is used to avoid loop with checking api key duplicate!
-	maxTestAttempts := 10
-	for i := 0; i < maxTestAttempts; i++ {
+	var ok bool
+
+	//checks for duplicate API keys
+	for i := 0; i < utils.MAXATTEMPTSFORKEYGENERATION; i++ {
 		createAPI, timeCreateApi = createAPIKey(login.Email)
+
 		if !h.store.ApiKeyExists(ctx, createAPI) {
+			ok = true
 			break
 		}
-		//this would only be in the senario where some number breakes the md5 hash or full storage in database
-		//then it would be an infinte loop of generating api keys, this should not happen, so we want to break this after a certain number of attempts and log it
-		if i == maxTestAttempts-1 {
-			fmt.Printf("Failed to generate a unique API key after %d attempts\n", i+1)
-			http.Error(w, "Failed to generate a unique API key after several attempts", http.StatusLoopDetected)
-			return
-		}
+	}
+
+	//this would be very unlikely to happen, but if we have tried to generate a unique API key 10 times and failed, we return an error to avoid an infinite loop
+	//this is to ensure that we dont have duplicate API keys, which would be a security risk and cause issues with the functionality of the API
+	if !ok {
+		utils.SetMessageForLogger(w, "AUTH_REGISTER_FAIL: api key generation exhausted")
+		writeJSONError(w, http.StatusLoopDetected, "Failed to generate a unique API key")
+		return
+	}
+
+	// Store the API key in Firestore
+	reg := model.Authentication{
+		Name:      login.Name,
+		Email:     login.Email,
+		ApiKey:    createAPI,
+		CreatedAt: timeCreateApi,
+	}
+
+	err = h.store.CreateApiStorage(ctx, reg)
+	if err != nil {
+		utils.SetMessageForLogger(w, "Firestore write failed")
+		writeJSONError(w, http.StatusInternalServerError, "Failed to save api keys in Firestore")
+		return
 	}
 
 	//formatting the response to the user, which includes the generated API key and the time of API creation
@@ -105,21 +128,11 @@ func (h *Handler) RegisterAuth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	if err := json.NewEncoder(w).Encode(keyResponse); err != nil {
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		utils.SetMessageForLogger(w, "Failed to encode response: "+err.Error())
+		writeJSONError(w, http.StatusInternalServerError, "Failed to encode response")
 		return
 	}
 
-	reg := model.Authentication{
-		Name:      login.Name,
-		Email:     login.Email,
-		ApiKey:    keyResponse.ApiKey,
-		CreatedAt: timeCreateApi,
-	}
-	err = h.store.CreateApiStorage(ctx, reg)
-	if err != nil {
-		http.Error(w, "Failed to save api keys in Firestore", http.StatusInternalServerError)
-		return
-	}
 }
 
 /*
@@ -136,19 +149,13 @@ This allows us to keep track of when the API key was created, which can be usefu
 func createAPIKey(email string) (string, string) {
 
 	timeCreateApi := time.Now().Format("20060102 15:04") //this is the format specified in the assignement for time
-	fmt.Println("Time of API creation:", timeCreateApi)  //maybe logg this
-
-	startOfUserAPI := "sk-envdash-"
 
 	// Generate hash of email + current time using md5
 	//this will be used as the api key for the user, and will be unique for each registration
 	//unique even, even same email cant make same key, because of the time component
 	hash := md5.Sum([]byte(email + time.Now().String()))
 	hashString := hex.EncodeToString(hash[:])
-	createAPI := startOfUserAPI + hashString
-
-	// Display the character
-	fmt.Println("createAPI:", createAPI)
+	createAPI := utils.STARTOFUSERAPI + hashString
 
 	return createAPI, timeCreateApi
 }
@@ -171,25 +178,37 @@ func (h *Handler) DeleteAuth(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	if r.Method != http.MethodDelete { //if not a DELETE request, return method not allowed
-		http.Error(w, "Only POST method allowed", http.StatusMethodNotAllowed)
+		writeJSONError(w, http.StatusMethodNotAllowed, "Only DELETE method allowed")
+		utils.SetMessageForLogger(w, "Method not allowed")
 		return
 	}
 
 	API := r.PathValue("id")
+
+	if API == "" {
+		utils.SetMessageForLogger(w, "DELETE_AUTH_FAIL: missing id param")
+		writeJSONError(w, http.StatusBadRequest, "missing id")
+		return
+	}
+
 	//Checks if api key exists
 	if !h.store.ApiKeyExists(ctx, API) {
-		http.Error(w, "could not find API key", http.StatusNotFound)
+		writeJSONError(w, http.StatusNotFound, "could not find API key")
+		utils.SetMessageForLogger(w, "could not find API key")
 		return
 	}
 
 	//we have to delete this key in firestore
 	err := h.store.DeleteAPIkey(ctx, API)
 	if err != nil {
-		http.Error(w, "something went wrong in Firestore, while trying to delete apikey", http.StatusInternalServerError)
+		writeJSONError(w, http.StatusInternalServerError, "something went wrong in Firestore, while trying to delete apikey")
+		messageForLogger := "Problem in firestore, while trying to delete apikey: " + err.Error()
+		utils.SetMessageForLogger(w, messageForLogger)
 		return
 	}
 
 	//if it goes through, it works
+	utils.SetMessageForLogger(w, "DELETE_AUTH_SUCCESS")
 	w.WriteHeader(http.StatusNoContent)
 
 }

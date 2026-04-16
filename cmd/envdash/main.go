@@ -10,6 +10,7 @@ import (
 	utils "assignment-2/internal/utils"
 	"context"
 	"strings"
+	"time"
 
 	"log"
 	"net/http"
@@ -21,6 +22,7 @@ import (
 
 func main() {
 
+	startedAt := time.Now() // starts the timer
 	ctx := context.Background()
 
 	credFile := os.Getenv("FIREBASE_CREDENTIALS_FILE")
@@ -58,6 +60,15 @@ func main() {
 	defer client.Close()
 	st := store.NewFirestoreStore(client)
 	h := handler.NewFirestoreHandler(st, cache)
+
+	statusHandler := handler.NewStatusHandler(
+		countryClient,
+		weatherClient,
+		aqClient,
+		currencyClient,
+		nil, // keep notification/webhook plumbing as skeletons for now
+		startedAt,
+	)
 	/*
 		ctx := context.Background()
 		//client, err := firestore.NewClient(ctx, "<PROJECT_ID>", ADD PROJECT ID HERTE
@@ -92,14 +103,40 @@ func main() {
 	router := http.NewServeMux()
 
 	router.HandleFunc("/", handler.DefaultHandler)
-	router.HandleFunc(utils.REGISTRATION_PATH, h.RegistrationHandler)
-	router.HandleFunc(utils.AUTHENTICATION_PATH, h.RegisterAuth)
-	router.HandleFunc(utils.AUTHENTICATION_PATH+"/", h.RegisterAuth)
-	router.HandleFunc(utils.AUTHENTICATION_PATH+"/{id}", h.DeleteAuth)
-	router.HandleFunc(utils.AUTHENTICATION_PATH+"/{id}"+"/", h.DeleteAuth)
+
 	router.HandleFunc(utils.DASHBOARD_PATH, h.DashboardHandler)
 	// Configure the HTTP server with the network address and
 	// the router wrapped in logging middleware.
+	//public routes:
+	router.HandleFunc(utils.AUTHENTICATION_PATH, h.RegisterAuth)
+	router.HandleFunc(utils.AUTHENTICATION_PATH+"/", h.RegisterAuth)
+	router.HandleFunc(utils.STATUS_PATH, statusHandler.GetStatus)
+	router.HandleFunc(utils.STATUS_PATH+"/", statusHandler.GetStatus)
+
+	//Private routes (api check in middelware)
+	privateRouter := http.NewServeMux()
+	privateRouter.HandleFunc("/", handler.DefaultHandler)
+	///Auth
+	privateRouter.HandleFunc(utils.AUTHENTICATION_PATH, h.RegisterAuth)
+	privateRouter.HandleFunc(utils.AUTHENTICATION_PATH+"/", h.RegisterAuth)
+	privateRouter.HandleFunc(utils.AUTHENTICATION_PATH+"/{id}", h.DeleteAuth)
+	privateRouter.HandleFunc(utils.AUTHENTICATION_PATH+"/{id}"+"/", h.DeleteAuth)
+	///Notification
+	privateRouter.HandleFunc(utils.NOTIFICATION_PATH, h.NotificationSpinner)
+	privateRouter.HandleFunc(utils.NOTIFICATION_PATH+"/", h.NotificationSpinner)
+	privateRouter.HandleFunc(utils.NOTIFICATION_PATH+"/{id}", h.NotificationSpinnerById)
+	privateRouter.HandleFunc(utils.NOTIFICATION_PATH+"/{id}/", h.NotificationSpinnerById)
+
+	///Registration
+	privateRouter.HandleFunc(utils.REGISTRATION_PATH, h.RegistrationHandler)
+
+	//Only for some of the routnes, not global
+	router.Handle("/", h.AuthMiddleware(privateRouter))
+
+	// Configure the HTTP server with the network address and
+	// the router wrapped in logging middleware.
+	router.HandleFunc(utils.REGISTRATION_PATH, h.RegistrationHandler)
+
 	server := http.Server{
 		Addr:    ":" + port,
 		Handler: utils.Logging(router),
