@@ -9,19 +9,19 @@ import (
 )
 
 type Handler struct {
-	store               store.FireStore // firestore
+	store               StoreInterface // firestore
 	restCountriesClient client.RestCountriesClient
 }
 
 func NewHandler(s store.FireStore, restCountriesClient client.RestCountriesClient) *Handler {
 	return &Handler{
-		store:               s,
+		store:               &s,
 		restCountriesClient: restCountriesClient,
 	}
 }
 
 func NewFirestoreHandler(s *store.FireStore) *Handler {
-	return &Handler{store: *s}
+	return &Handler{store: s}
 }
 func writeJSONError(w http.ResponseWriter, code int, errMsg string) {
 	// Create an instance of the custom error struct
@@ -46,4 +46,10 @@ func writeJSONError(w http.ResponseWriter, code int, errMsg string) {
 
 	// Write the JSON response body
 	w.Write(jsonBytes)
+}
+
+func writeError(w http.ResponseWriter, status int, msg string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(map[string]string{"error": msg})
 }
