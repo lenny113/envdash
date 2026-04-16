@@ -408,8 +408,6 @@ func TestCheckThresholdNotifications_AllOperators(t *testing.T) {
 		{"<=", 10.0, 10.1, false},
 		{"==", 10.0, 10.0, true},
 		{"==", 10.0, 10.1, false},
-		{"!=", 10.0, 9.0, true},
-		{"!=", 10.0, 10.0, false},
 	}
 
 	for _, tc := range tests {

@@ -378,8 +378,6 @@ func (h *Handler) CheckThresholdNotifications(ctx context.Context, country strin
 				conditionMet = measuredValue <= threshold.Value
 			case "==":
 				conditionMet = measuredValue == threshold.Value
-			case "!=":
-				conditionMet = measuredValue != threshold.Value
 			default:
 				utils.SetMessageForLogger(nil, "Invalid operator in threshold notification: "+threshold.Operator)
 				continue
