@@ -98,13 +98,13 @@ If you prefer to configure it manually, follow the steps below.
 Ensure the template file exists at:
 
 ```
-playground/devutils/gitmessage.txt
+docs/devutils/gitmessage.txt
 ```
 
 Then configure Git to use this template by running the following command from the repository root:
 
 ```
-git config commit.template playground/devutils/gitmessage.txt
+git config commit.template docs/devutils/gitmessage.txt
 ```
 
 This sets the commit template for the current repository only.
@@ -118,7 +118,7 @@ git config --get commit.template
 If configured correctly, this should output:
 
 ```
-playground/devutils/gitmessage.txt
+docs/devutils/gitmessage.txt
 ```
 
 After this is set, the commit message template will automatically appear when creating commits in Git tools such as Sublime Merge or when running `git commit` from the terminal.
