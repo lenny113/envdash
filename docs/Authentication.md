@@ -1,5 +1,8 @@
 # Authentication
 
+###  Advanced Task
+Added authentication with Firestore as the storage backend. Implemented middleware that protects all routes except the status and authentication endpoints. Strictly speaking, this is not full middleware because it does not wrap every route, and it may introduce serious routing issues since delete authorization performs its own API key validation separately
+
 ### Why authenticate?
 You should authenticate to get your own API key.  
 You will need an API key to access this service.

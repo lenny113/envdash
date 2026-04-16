@@ -391,29 +391,7 @@ We have two type of notificaitons, lifecycle and threshold:
 
 
 #### Parameters:
-
-| Parameter      | Type  | Description                       |
-|:-----------|:------------|:----------------------------    |
-| `url`     | `string`    | *Required* URL to POST to when the event fires                      |
-| `country`    | `string`    | *Optional*  2 letter country code ([lookup here](https://datahub.io/core/country-list)). Omit or leave empty to match all countries|
-| `event`     | `string`    | *Required* One of: `REGISTER`, `CHANGE`, `DELETE`, `INVOKE`, `THRESHOLD`                    |
-
-
-| Event | Triggered when… |
-|-------|-----------------|
-| `REGISTER` | A new dashboard configuration is registered (`POST /registrations/`) |
-| `CHANGE` | A configuration is updated (`PUT` or `PATCH /registrations/{id}`) |
-| `DELETE` | A configuration is deleted (`DELETE /registrations/{id}`) |
-| `INVOKE` | A populated dashboard is retrieved (`GET /dashboards/{id}`) |
-| `THRESHOLD` | A live measured value crosses a user-defined threshold during dashboard retrieval |
-
-For threshold notificatoins:
-| Parameter      | Type  | Description                       |
-|:-----------|:------------|:----------------------------    |
-| `threshold.field`  | `string`    | *Required* Field to monitor: `pm25` \| `pm10` \| `temperature` \| `precipitation`                   |
-| `threshold.operator`| `Comparison operator`    | *Required*  Comparison operator: `>`, `<`, `>=`, `<=`, `==` |
-| `threshold.value`  | `string`    | *Required* Numeric threshold value        |
-
+For a detailed look at the parameters take a look here: [Parameters](docs/Notifications.md#parameters)
 
 
 #### Response:
@@ -468,6 +446,10 @@ Body:
 }
 ```
 
+### Parameters
+For a detailed look at the parameters take a look here: [Parameters](docs/Notifications.md#parameters)
+
+
 considerations: everyone can read your webhook even non owners of the particular webhooks as long as they know the ID
 
 </details>
@@ -511,11 +493,8 @@ You wil now see every notification registerd to your account
 }
 ```
 
-TODO: fields in separate document!!!
-| Fields      | Description                 |
-|:----------- |:----------------------------|
-| `key`       | Your personal API key  |
-| `createdAt` | When the API key was created     |
+### Parameters
+For a detailed look at the parameters take a look here: [Parameters](docs/Notifications.md#parameters)|
 
 </details>
 
