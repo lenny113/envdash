@@ -632,13 +632,21 @@ func (f *FireStore) DeleteNotification(ctx context.Context, id string, apiKey st
 //****************************************************************************************************************//
 
 func (f *FireStore) DB_Status(ctx context.Context) bool {
-	colelction := f.client.Collection("healthcheck")
+	doc := f.client.Collection("healthcheck").Doc("test")
 
-	_, err := colelction.Documents(ctx).GetAll()
-	if err != nil {
+	//Write check to firestore
+	if _, err := doc.Set(ctx, map[string]any{"ok": true}); err != nil {
 		return false
 	}
-	//returns tue, the collection exists (only uesed for healthcheck)
+
+	//checking if we can reed what we wrote
+	if _, err := doc.Get(ctx); err != nil {
+		return false
+	}
+	//Now deleting what we wrote, this makes this func idempotent
+	//Also not filling our database slowly with status checks
+	_, _ = doc.Delete(ctx)
+
 	return true
 }
 
