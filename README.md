@@ -108,27 +108,34 @@ assignment-2/
         └── logger.go
 ```
 
-### cmd
-cmd contains the main.go file for running the project
-### internal
-Internal contains most of the files used in the project. These are files that will not be accesible outside the go module developed in the project.
-Meaning if you include this in go.mod the internals will not be exposed. 
-#### client
-Client contains all the api wrappes for external apis, as their own separate packages with their own tests. 
-These are only touched by the local cache and the status endpoint
+### Cmd
 
-#### handlers
-TODO 
-These files contains the endpoints as well as tests for these endpoints. 
+cmd contains the `main.go` file for running the project.
 
-#### models
-These contains modular files that contain variables used by multiple files
+### Internal
 
-#### store
-Store contains the local cache as well as the logic required to connect to firestore
+internal contains most of the files used in the project. These are files that will not be accessible outside the Go module developed in the project. This means that if this module is included in another `go.mod`, the internal packages will not be exposed.
+
+#### Client
+
+Client contains all the Application Programming Interface (API) wrappers for external APIs, as separate packages with their own tests. These are only touched by the local cache and the status endpoint. More details are available in the docs folder: [client.md](./docs/client.md).
+
+#### Handlers
+TODO
+Handlers contain the endpoints, middleware, and tests for the endpoint behavior.
+
+#### Models
+
+Models contain modular files with shared data structures used across multiple files.
+
+#### Store
+
+Store contains the local cache as well as the logic required to connect to Firestore. More details are available in the docs folder: [cache.md](./docs/cache.md).
 
 #### Utils
-Utils contains the http client factory as well as the logic for the logger.
+
+Utils contains the Hypertext Transfer Protocol (HTTP) client factory as well as the logic for the logger.
+
 
 ## API Implementation
 
