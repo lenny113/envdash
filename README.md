@@ -781,7 +781,6 @@ cd ./cmd/envdash
 $env:FIREBASE_CREDENTIALS_FILE="C:\path\to\firebase-credentials.json"
 $env:OPENAQ_API_KEY="your_openaq_api_key"
 $env:PORT="8080"
-go run .
 ```
 
 * Run the command 
