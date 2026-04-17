@@ -23,13 +23,12 @@ This code was developed by:
 * Wrapper that can access external APIs
 
 ## Tech Stack
-TODO Add links
- - Go 
- - Restcountries
- - OpenAq
- - Openmeteo
- - Restcurrencies
- - Firestore
+- [Go](https://go.dev/)
+- [Restcountries](http://129.241.150.113:8080/)
+- [OpenAQ](https://docs.openaq.org/)
+- [Openmeteo](https://open-meteo.com/)
+- [Restcurrencies](http://129.241.150.113:9090/currency/)
+- [Firestore](https://firebase.google.com/docs/firestore)
 
 ## Project structure 
 This section outlines the base structure of the project, details about the implementation of these components are in the docs folder: [docs](./docs).
@@ -117,8 +116,7 @@ Meaning if you include this in go.mod the internals will not be exposed.
 Client contains all the api wrappes for external apis, as their own separate packages with their own tests. 
 These are only touched by the local cache and the status endpoint
 
-#### handlers
-TODO 
+#### handlers 
 These files contains the endpoints as well as tests for these endpoints. 
 
 #### models
@@ -544,10 +542,9 @@ The page renders the OpenAPI Specification (OAS) automatically in the browser us
 - The underlying OpenAPI specification is used internally by the documentation page and does not need to be called manually in normal use.
 
 </details>
----
 
 <details>
-<summary><h2> Create Notification </h2></summary>
+<summary><h4> Create Notification </h4></summary>
 
 Simply **POST** your notification query with correct body `/envdash/v1/notifications/`
 
@@ -629,7 +626,7 @@ event you registered is fulfilled
 --- 
 
 <details>
-<summary><h2> Retrieve a Specific Webhook  </h2></summary>
+<summary><h4> Retrieve a Specific Webhook  </h4></summary>
 
 Simply **GET** your notifcation by `/envdash/v1/notifications/{ID_Of_Notifcation}`
 
@@ -671,12 +668,11 @@ Body:
 </details>
 
 ---
-TODO
 [Authentication](./docs/Authentication.md)
 [Notifications system](./docs/notification.md)
-TODO
+
 <details>
-<summary> <h2> List All Your Registered Webhooks </h2> </summary>
+<summary> <h4> List All Your Registered Webhooks </h4> </summary>
 
 Simply **GET** `/envdash/v1/notifications/`
 
@@ -731,7 +727,7 @@ You will now see every notification registered to your account
 
 <details>
 
-<summary> <h2> Delete Notification </h2> </summary>
+<summary> <h4> Delete Notification </h4> </summary>
 
 Simply **DELETE** your notification `/envdash/v1/notifications/{NotificationID}`
 
@@ -866,7 +862,7 @@ curl http://localhost:8080
 
 
 ## Running Tests
-TODO
+
 To run tests, navigate to the project directory:
 
 ```bash
