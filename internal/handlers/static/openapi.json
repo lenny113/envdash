@@ -1,0 +1,1396 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "envdash API",
+    "version": "1.0.0",
+    "description": "REST API service for country information, air quality, user API keys, dashboards, registrations, notifications, and service status. DISCLAIMER: This openapi spec was generated from our internal notes by chatGPT so inconsistencies may occur."
+  },
+  "servers": [
+    {
+      "url": "http://10.212.172.108:8080",
+      "description": "NTNU OpenStack deployment (internal NTNU network required)"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Authentication"
+    },
+    {
+      "name": "Registrations"
+    },
+    {
+      "name": "Dashboards"
+    },
+    {
+      "name": "Notifications"
+    },
+    {
+      "name": "Status"
+    }
+  ],
+  "paths": {
+    "/envdash/v1/auth/": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Register a user and issue an API key",
+        "operationId": "createApiKey",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthCreateRequest"
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "name": "Alice",
+                    "email": "alice@mail.com"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "API key created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthCreateResponse"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "key": "sk-envdash-YourAPIkey...",
+                      "createdAt": "20260317 20:32"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/envdash/v1/auth/{apiKey}": {
+      "delete": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Delete an API key",
+        "description": "Deletes the API key identified by the path parameter. The caller must authenticate with an API key that belongs to the same user and is authorized to delete the target key.",
+        "operationId": "deleteApiKey",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "apiKey",
+            "in": "path",
+            "required": true,
+            "description": "API key to delete",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "API key deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/envdash/v1/registrations/": {
+      "get": {
+        "tags": [
+          "Registrations"
+        ],
+        "summary": "Retrieve all registered countries",
+        "operationId": "listRegistrations",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of registrations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Registration"
+                  }
+                },
+                "examples": {
+                  "default": {
+                    "value": [
+                      {
+                        "id": "your-registration-id",
+                        "country": "Norway",
+                        "isoCode": "NO",
+                        "features": {
+                          "temperature": true,
+                          "precipitation": true,
+                          "capital": true,
+                          "coordinates": true,
+                          "population": true,
+                          "area": true,
+                          "targetCurrencies": [
+                            "JPY",
+                            "USD",
+                            "EUR"
+                          ]
+                        },
+                        "lastChange": "20060102 15:04"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Registrations"
+        ],
+        "summary": "Register a country",
+        "description": "Creates a registration used to generate dashboard data. `country` and `isoCode` are case-insensitive. At least one must be provided. If both are provided, they must match. `targetCurrencies` is case-insensitive and supports a maximum of 10 currencies.",
+        "operationId": "createRegistration",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrationCreateRequest"
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "country": "Norway",
+                    "isoCode": "NO",
+                    "features": {
+                      "temperature": true,
+                      "precipitation": true,
+                      "capital": true,
+                      "coordinates": true,
+                      "population": true,
+                      "area": true,
+                      "targetCurrencies": [
+                        "JPY",
+                        "usd",
+                        "EUR"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Registration created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationCreateResponse"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "id": "your-registration-id",
+                      "lastChange": "20060102 15:04"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/envdash/v1/registrations/{id}": {
+      "get": {
+        "tags": [
+          "Registrations"
+        ],
+        "summary": "Retrieve a specific registered country",
+        "operationId": "getRegistration",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Registration ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Registration found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Registration"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "id": "your-registration-id",
+                      "country": "Norway",
+                      "isoCode": "NO",
+                      "features": {
+                        "temperature": true,
+                        "precipitation": true,
+                        "capital": true,
+                        "coordinates": true,
+                        "population": true,
+                        "area": true,
+                        "targetCurrencies": [
+                          "JPY",
+                          "USD",
+                          "EUR"
+                        ]
+                      },
+                      "lastChange": "20060102 15:04"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Registrations"
+        ],
+        "summary": "Replace a registered country",
+        "operationId": "replaceRegistration",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Registration ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrationCreateRequest"
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "country": "Norway",
+                    "isoCode": "NO",
+                    "features": {
+                      "temperature": true,
+                      "precipitation": true,
+                      "airQuality": true,
+                      "capital": true,
+                      "coordinates": true,
+                      "population": true,
+                      "area": true,
+                      "targetCurrencies": [
+                        "EUR",
+                        "USD",
+                        "SEK"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated registration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Registration"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Registrations"
+        ],
+        "summary": "Partially update a registered country",
+        "operationId": "patchRegistration",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Registration ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrationPatchRequest"
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "country": "Sweden",
+                    "isoCode": "SE",
+                    "features": {
+                      "temperature": false,
+                      "targetCurrencies": [
+                        "EUR"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Registration updated"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Registrations"
+        ],
+        "summary": "Delete a registered country",
+        "operationId": "deleteRegistration",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Registration ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Registration deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/envdash/v1/dashboards/{id}": {
+      "get": {
+        "tags": [
+          "Dashboards"
+        ],
+        "summary": "Get dashboard data for a registered country",
+        "operationId": "getDashboard",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Registration ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dashboard data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardResponse"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "country": "Norway",
+                      "isoCode": "NO",
+                      "features": {
+                        "temperature": 5.3,
+                        "precipitation": 12.1,
+                        "capital": "Oslo",
+                        "coordinates": [
+                          60.472,
+                          8.4689
+                        ],
+                        "population": 5379475,
+                        "area": 323802,
+                        "targetCurrencies": {
+                          "JPY": 14.23,
+                          "USD": 0.09,
+                          "EUR": 0.085
+                        },
+                        "airQuality": {
+                          "pm25": 10,
+                          "pm10": 20,
+                          "level": "good"
+                        }
+                      },
+                      "lastRetrieval": "20060102 15:04"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/envdash/v1/notifications/": {
+      "get": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "List all notifications registered to the authenticated user",
+        "operationId": "listNotifications",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Notifications for the authenticated user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Notification"
+                  }
+                },
+                "examples": {
+                  "default": {
+                    "value": [
+                      {
+                        "id": "ID_Of_Notifcation",
+                        "url": "https://webhook.site/your-unique-URL",
+                        "country": "NO",
+                        "event": "CHANGE"
+                      },
+                      {
+                        "id": "Another_ID_Of_Notifcation",
+                        "url": "https://webhook.site/your-unique-URL",
+                        "country": "NO",
+                        "event": "DELETE"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Create a notification webhook",
+        "description": "Creates either a lifecycle notification or a threshold notification.",
+        "operationId": "createNotification",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationCreateRequest"
+              },
+              "examples": {
+                "lifecycle": {
+                  "value": {
+                    "url": "https://webhook.site/your-unique-URL",
+                    "country": "NO",
+                    "event": "INVOKE"
+                  }
+                },
+                "threshold": {
+                  "value": {
+                    "url": "https://webhook.site/your-unique-URL",
+                    "country": "NO",
+                    "event": "THRESHOLD",
+                    "threshold": {
+                      "field": "pm25",
+                      "operator": ">",
+                      "value": 35
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Notification created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationCreateResponse"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "id": "IdOfYourNotifcation"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/envdash/v1/notifications/{id}": {
+      "get": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Retrieve a specific notification",
+        "description": "This endpoint is documented as publicly readable when the caller knows the notification ID.",
+        "operationId": "getNotification",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Notification ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Notification found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Notification"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "id": "ID_Of_Notifcation",
+                      "url": "https://webhook.site/your-unique-URL",
+                      "country": "NO",
+                      "event": "THRESHOLD",
+                      "threshold": {
+                        "field": "PM25",
+                        "operator": "==",
+                        "value": 35
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Delete a notification",
+        "description": "Deletes a notification owned by the authenticated user.",
+        "operationId": "deleteNotification",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Notification ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Notification deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/dashboards/v1/status": {
+      "get": {
+        "tags": [
+          "Status"
+        ],
+        "summary": "Check API and dependency status",
+        "description": "Returns service health details, dependency status, webhook count, API version, and uptime. This route is modeled exactly as documented in the README.",
+        "operationId": "getStatus",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "description": "API key",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Status response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusResponse"
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "CountriesAPI": "Status of the REST Countries API",
+                      "MeteoAPI": "Status of the Open-Meteo API",
+                      "OpenAQAPI": "Status of the OpenAq API",
+                      "CurrencyAPI": "Status of the REST Currency API",
+                      "NotificationDB": "Status of the Notification database",
+                      "webhooks": "Number of webhooks registered",
+                      "version": "API Version",
+                      "uptime": "Time since last server reboot (In Seconds)"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      }
+    },
+    "schemas": {
+      "AuthCreateRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "email"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          }
+        }
+      },
+      "AuthCreateResponse": {
+        "type": "object",
+        "required": [
+          "key",
+          "createdAt"
+        ],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Timestamp in YYYYMMDD HH:mm format"
+          }
+        }
+      },
+      "RegistrationFeatureFlags": {
+        "type": "object",
+        "properties": {
+          "temperature": {
+            "type": "boolean"
+          },
+          "precipitation": {
+            "type": "boolean"
+          },
+          "airQuality": {
+            "type": "boolean"
+          },
+          "capital": {
+            "type": "boolean"
+          },
+          "coordinates": {
+            "type": "boolean"
+          },
+          "population": {
+            "type": "boolean"
+          },
+          "area": {
+            "type": "boolean"
+          },
+          "targetCurrencies": {
+            "type": "array",
+            "maxItems": 10,
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "RegistrationCreateRequest": {
+        "type": "object",
+        "properties": {
+          "country": {
+            "type": "string"
+          },
+          "isoCode": {
+            "type": "string"
+          },
+          "features": {
+            "$ref": "#/components/schemas/RegistrationFeatureFlags"
+          }
+        },
+        "required": [
+          "features"
+        ],
+        "description": "At least one of `country` or `isoCode` should be provided."
+      },
+      "RegistrationPatchFeatureFlags": {
+        "type": "object",
+        "properties": {
+          "temperature": {
+            "type": "boolean"
+          },
+          "precipitation": {
+            "type": "boolean"
+          },
+          "airQuality": {
+            "type": "boolean"
+          },
+          "capital": {
+            "type": "boolean"
+          },
+          "coordinates": {
+            "type": "boolean"
+          },
+          "population": {
+            "type": "boolean"
+          },
+          "area": {
+            "type": "boolean"
+          },
+          "targetCurrencies": {
+            "type": "array",
+            "maxItems": 10,
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "RegistrationPatchRequest": {
+        "type": "object",
+        "properties": {
+          "country": {
+            "type": "string"
+          },
+          "isoCode": {
+            "type": "string"
+          },
+          "features": {
+            "$ref": "#/components/schemas/RegistrationPatchFeatureFlags"
+          }
+        }
+      },
+      "Registration": {
+        "type": "object",
+        "required": [
+          "id",
+          "country",
+          "isoCode",
+          "features",
+          "lastChange"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "isoCode": {
+            "type": "string"
+          },
+          "features": {
+            "$ref": "#/components/schemas/RegistrationFeatureFlags"
+          },
+          "lastChange": {
+            "type": "string",
+            "description": "Timestamp in YYYYMMDD HH:mm format"
+          }
+        }
+      },
+      "RegistrationCreateResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "lastChange"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "lastChange": {
+            "type": "string",
+            "description": "Timestamp in YYYYMMDD HH:mm format"
+          }
+        }
+      },
+      "AirQuality": {
+        "type": "object",
+        "properties": {
+          "pm25": {
+            "type": "number",
+            "format": "float"
+          },
+          "pm10": {
+            "type": "number",
+            "format": "float"
+          },
+          "level": {
+            "type": "string",
+            "enum": [
+              "good",
+              "moderate",
+              "unhealthy for sensitive groups",
+              "unhealthy",
+              "hazardous"
+            ]
+          }
+        }
+      },
+      "DashboardFeatures": {
+        "type": "object",
+        "properties": {
+          "temperature": {
+            "type": "number",
+            "format": "float"
+          },
+          "precipitation": {
+            "type": "number",
+            "format": "float"
+          },
+          "capital": {
+            "type": "string"
+          },
+          "coordinates": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "type": "number",
+              "format": "float"
+            }
+          },
+          "population": {
+            "type": "integer"
+          },
+          "area": {
+            "type": "number",
+            "format": "float"
+          },
+          "targetCurrencies": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number",
+              "format": "float"
+            }
+          },
+          "airQuality": {
+            "$ref": "#/components/schemas/AirQuality"
+          }
+        }
+      },
+      "DashboardResponse": {
+        "type": "object",
+        "required": [
+          "country",
+          "isoCode",
+          "features",
+          "lastRetrieval"
+        ],
+        "properties": {
+          "country": {
+            "type": "string"
+          },
+          "isoCode": {
+            "type": "string"
+          },
+          "features": {
+            "$ref": "#/components/schemas/DashboardFeatures"
+          },
+          "lastRetrieval": {
+            "type": "string",
+            "description": "Timestamp in YYYYMMDD HH:mm format"
+          }
+        }
+      },
+      "Threshold": {
+        "type": "object",
+        "required": [
+          "field",
+          "operator",
+          "value"
+        ],
+        "properties": {
+          "field": {
+            "type": "string"
+          },
+          "operator": {
+            "type": "string",
+            "enum": [
+              ">",
+              ">=",
+              "<",
+              "<=",
+              "==",
+              "!="
+            ]
+          },
+          "value": {
+            "type": "number",
+            "format": "float"
+          }
+        }
+      },
+      "NotificationLifecycleCreateRequest": {
+        "type": "object",
+        "required": [
+          "url",
+          "country",
+          "event"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "country": {
+            "type": "string"
+          },
+          "event": {
+            "type": "string",
+            "enum": [
+              "INVOKE",
+              "CHANGE",
+              "DELETE"
+            ]
+          }
+        }
+      },
+      "NotificationThresholdCreateRequest": {
+        "type": "object",
+        "required": [
+          "url",
+          "country",
+          "event",
+          "threshold"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "country": {
+            "type": "string"
+          },
+          "event": {
+            "type": "string",
+            "enum": [
+              "THRESHOLD"
+            ]
+          },
+          "threshold": {
+            "$ref": "#/components/schemas/Threshold"
+          }
+        }
+      },
+      "NotificationCreateRequest": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/NotificationLifecycleCreateRequest"
+          },
+          {
+            "$ref": "#/components/schemas/NotificationThresholdCreateRequest"
+          }
+        ]
+      },
+      "Notification": {
+        "type": "object",
+        "required": [
+          "id",
+          "url",
+          "country",
+          "event"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "country": {
+            "type": "string"
+          },
+          "event": {
+            "type": "string",
+            "enum": [
+              "INVOKE",
+              "CHANGE",
+              "DELETE",
+              "THRESHOLD"
+            ]
+          },
+          "threshold": {
+            "$ref": "#/components/schemas/Threshold"
+          }
+        }
+      },
+      "NotificationCreateResponse": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "StatusResponse": {
+        "type": "object",
+        "required": [
+          "CountriesAPI",
+          "MeteoAPI",
+          "OpenAQAPI",
+          "CurrencyAPI",
+          "NotificationDB",
+          "webhooks",
+          "version",
+          "uptime"
+        ],
+        "properties": {
+          "CountriesAPI": {
+            "type": "string"
+          },
+          "MeteoAPI": {
+            "type": "string"
+          },
+          "OpenAQAPI": {
+            "type": "string"
+          },
+          "CurrencyAPI": {
+            "type": "string"
+          },
+          "NotificationDB": {
+            "type": "string"
+          },
+          "webhooks": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "uptime": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ]
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {}
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Bad request",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Unauthorized",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Forbidden",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "Conflict",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "InternalServerError": {
+        "description": "Internal server error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      }
+    }
+  }
+}
