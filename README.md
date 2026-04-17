@@ -1,4 +1,4 @@
-# [Project Name]
+![WeatherBoy logo](WeatherBoy_logo.png)
 
 ## Introduction
 
