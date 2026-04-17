@@ -1,4 +1,4 @@
-# [Project Name]
+# [WeatherBoy]
 
 ## Introduction
 
@@ -11,7 +11,7 @@ envdash is a REST API service designed to provide airquality and general informa
 This code was developed by:
 TODO
 * [Bror Wetlesen Vedeld] [@[BroVed]]([profile-link])
-* [Your Name] [@[username]]([profile-link])
+* [Robin Jahre] [@[Robinja]]([https://git.gvk.idi.ntnu.no/robinja])
 * [Your Name] [@[username]]([profile-link])
 
 ## Features
