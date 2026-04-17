@@ -234,6 +234,12 @@ func decodeRESTCountriesResponse(body []byte, askedUsingISO bool) (RestCountries
 		}
 		result.Currencies = &codes
 	}
+
+	if len(src.Borders) > 0 {
+		borders := append([]string(nil), src.Borders...)
+		result.Borders = &borders
+	}
+
 	return result, nil
 }
 
