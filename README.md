@@ -134,7 +134,7 @@ Utils contains the http client factory as well as the logic for the logger.
 
 * **Language:** Go
 
-### Deployment
+
 TODO
 Project is hosted on NTNU Openstack: [Envdash endpoint](http://10.212.172.108:8080/)
 
@@ -721,6 +721,15 @@ This is desided on your api key you use in header.
 ---
 
 
+## Prerequisites
+
+- An [OpenAQ API key](https://docs.openaq.org/using-the-api/api-key) (you need an account, it is free)
+
+>The `OPENAQ_API_KEY` can be provisioned from https://explore.openaq.org by creating a user and going to the settings for said user. Here you can generate an api key which you will need to set as an environment variable
+
+- A [Firebase](https://firebase.google.com/products/firestore) service account with credentials file (`firestore_auth.json`).
+
+>You can find your credentials after you have made a project -> `project settings` -> `firebase admin sdk` -> `choose "go"` -> `generate new private key` 
 
 
 ## Environment Variables
@@ -728,21 +737,22 @@ This is desided on your api key you use in header.
 To run this project, you will need to add the following environment variables to your `.env` file, or project environment.
 
 `PORT` - Port to run the project on. This defaults to 8080
-`[FIREBASE_CREDENTIALS_FILE]` - path to firebase credentials file
+`FIREBASE_CREDENTIALS_FILE` - path to firebase credentials file
 `OPENAQ_API_KEY` - A string containing the openAQ_API_KEY
+
 
 ## Run Locally
 
 * Clone the repository
 
 ```bash
-git clone https://github.com/lenny113/Cloud.git
+git clone https://github.com/lenny113/envdash.git
 ```
 
 * Navigate to the project directory:
 
 ```bash
-cd ./cmd/envdash
+cd  envdash
 ```
 
 ### Run using Go:
@@ -758,40 +768,81 @@ cd ./cmd/envdash
   ```
 
 * ### Run using Docker:
-TODO
+
+
+## Deployment
+
+### Extra Prerequisites
+
+In addition to the previous Prerequisites, you also need:
+
+- Docker
+- Docker Compose (included with Docker Desktop)
+
+>Both can be downloaded following this [Guide](https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository) : 
+>>Step 1 and 2 (Install the Docker packages) should be completed.
+Step 1 (apt repository) can be skipped if you already have it installed
+
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/lenny113/envdash.git
+cd envdash
+```
+
+### 2. Create the environment file
+
+Create a `.env` file in the project root:
+
+```bash
+cat > .env << 'EOF'
+OPENAQ_API_KEY=your_openaq_api_key_here
+EOF
+```
+>you can change the exposed port, with adding `PORT=1234` as part of your `.env` file
+
+
+Or manually create `.env` with the following content:
+
+```env
+OPENAQ_API_KEY=your_openaq_api_key_here
+```
+
+### 3. Add Firebase credentials
+
+Place your Firebase service account JSON file in the project root and name it `firestore_auth.json`:
+
+```bash
+cp /path/to/your/serviceAccountKey.json ./firestore_auth.json
+```
+
+>Look at rrerequisites if you do not have one
+
+### 4. Build and run
+
 ```bash
 docker compose build
+docker compose up -d
 ```
 
-* #### Attached:
-TODO
+The Service is now available at `http://localhost:8080`.
 ```bash
-docker compose up [service-name]
+curl http://localhost:8080
 ```
+---
 
-* #### Detached:
-TODO
-```bash
-docker compose up [service-name] -d
-```
+### Useful commands
 
-* #### View Logs:
-TODO
-```bash
-docker compose logs [service-name]
-```
+| Action | Command |
+|---|---|
+| View logs | `docker compose logs app` |
+| Follow logs | `docker compose logs app -f` |
+| Stop services | `docker compose down` |
+| Restart | `docker compose restart app` |
+| Rebuild after code changes | `docker compose up -d --build` |
 
-* #### Follow Logs:
-TODO
-```bash
-docker compose logs [service-name] -f
-```
 
-* #### Stop Services:
-TODO
-```bash
-docker compose down [service-name]
-```
 
 ## Running Tests
 TODO
