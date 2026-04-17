@@ -172,6 +172,9 @@ func (h *StatusHandler) probeNotificationDB(ctx context.Context) int {
 }
 
 func (h *StatusHandler) count(ctx context.Context, collection string) int {
+	if h.store == nil {
+		return 0
+	}
 
 	count, err := h.store.CountFirestore(ctx, collection)
 	if err != nil {

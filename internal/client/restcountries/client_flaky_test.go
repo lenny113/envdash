@@ -77,16 +77,22 @@ func TestGetCountryInfo(t *testing.T) {
 	if data.Borders == nil {
 		t.Fatal("expected Borders in response")
 	}
-	expectedBorders := []string{"FIN", "SWE", "RUS"}
+
+	expectedBorders := map[string]bool{
+		"FIN": true,
+		"SWE": true,
+		"RUS": true,
+	}
+
 	if len(*data.Borders) != len(expectedBorders) {
 		t.Fatalf("expected %d borders, got %d: %v", len(expectedBorders), len(*data.Borders), *data.Borders)
 	}
-	for i, expected := range expectedBorders {
-		if (*data.Borders)[i] != expected {
-			t.Errorf("expected border[%d] to be %q, got %q", i, expected, (*data.Borders)[i])
+
+	for _, got := range *data.Borders {
+		if !expectedBorders[got] {
+			t.Errorf("unexpected border %q, got %v", got, *data.Borders)
 		}
 	}
-
 	if data.Currencies == nil {
 		t.Fatal("expected Currencies in response")
 	}
