@@ -121,49 +121,27 @@ func (c *openAQClient) GetInfo(req OpenAQ_InformationRequest) (OpenAQ_INT_Respon
 }
 
 /*
-This helper fetches all pages for a parameter and computes the mean value.
+This helper fetches the first page for a parameter and computes the mean value.
 */
 func (c *openAQClient) fetchMeanForParameter(isoCode string, parameterID int) (float64, error) {
-	values := make([]float64, 0)
-	page := 1
+	fullURL, err := buildURL(isoCode, parameterID, 1)
+	if err != nil {
+		return 0, err
+	}
 
-	for {
-		fullURL, err := buildURL(isoCode, parameterID, page)
-		if err != nil {
-			return 0, err
-		}
+	body, err := c.httpRequestFunction(fullURL)
+	if err != nil {
+		return 0, err
+	}
 
-		body, err := c.httpRequestFunction(fullURL)
-		if err != nil {
-			return 0, err
-		}
+	decoded, err := decodeResponse(body)
+	if err != nil {
+		return 0, err
+	}
 
-		decoded, err := decodeResponse(body)
-		if err != nil {
-			return 0, err
-		}
-
-		for _, result := range decoded.Results {
-			values = append(values, result.Value)
-		}
-
-		if len(decoded.Results) == 0 {
-			break
-		}
-
-		totalFound := decoded.Meta.Found
-		currentPage := decoded.Meta.Page
-		limit := decoded.Meta.Limit
-
-		if limit <= 0 {
-			limit = maxLimit
-		}
-
-		if currentPage*limit >= totalFound {
-			break
-		}
-
-		page++
+	values := make([]float64, 0, len(decoded.Results))
+	for _, result := range decoded.Results {
+		values = append(values, result.Value)
 	}
 
 	return calculateMean(values)

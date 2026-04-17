@@ -722,8 +722,8 @@ docker compose down [test-service-name]
 * Implement Firestore caching
     - the architecture supports this, we just need to implement it.
 * Optimize the openAQ api call
-    - currently this works by calling on a country code and filtering through the results.
-      this can often lead to 30+ calls, while the client is ratelimited so we dont disrupt external services, a better call shoould be found
+    - Currently this works by calling on a country code and using the first page of the result.
+      this is not an accurate measurement. But it was needed to get theuntryinfo in one api call.
 
 ## Support
 
