@@ -12,7 +12,7 @@ This code was developed by:
 
 * [Bror Wetlesen Vedeld] [@[BroVed]]([profile-link])
 * [Lennart Krogh] [@[Lennart]]([profile-link])
-* [Your Name] [@[username]]([profile-link])
+* [Robin Jahre] [@[robinja]]([profile-link])
 
 ## Features
 
