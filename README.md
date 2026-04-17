@@ -23,7 +23,6 @@ This code was developed by:
 * Wrapper that can access external APIs
 
 ## Tech Stack
-## Tech Stack
 - [Go](https://go.dev/)
 - [Restcountries](http://129.241.150.113:8080/)
 - [OpenAQ](https://docs.openaq.org/)
