@@ -510,10 +510,40 @@ GET /envdash/v1/dashboards/{ID}
 ```
 
 > `airQuality` is only included if air quality data is available. `level` is one of: `good`, `moderate`, `unhealthy for sensitive groups`, `unhealthy`, `hazardous`.
-
+---
 </details>
 
+<details>
+<summary><h4>Interactive API Documentation</h4></summary>
 
+Simply **GET** the documentation page at `/envdash/v1/docs`
+
+Example URL:
+`GET xxxxx:8080/envdash/v1/docs`
+
+-Body empty-
+
+#### Response:
+
+| Status Code | Content-Type |
+|:------------|:-------------|
+| `200 OK`    | `text/html`  |
+
+This endpoint serves an interactive documentation page for the Envdash Application Programming Interface (API).
+
+The page renders the OpenAPI Specification (OAS) automatically in the browser using Swagger UI, and allows you to:
+
+- inspect all available endpoints
+- view request and response schemas
+- test endpoints directly from the browser
+
+#### Notes:
+
+- If the documentation endpoint is public, it can be opened directly in a browser.
+- If the documentation endpoint is protected, you must be authenticated before accessing it.
+- The underlying OpenAPI specification is used internally by the documentation page and does not need to be called manually in normal use.
+
+</details>
 ---
 
 <details>
@@ -690,6 +720,7 @@ TODO: fields in separate document!!!
 </details>
 
 ---
+
 
 <details>
 
