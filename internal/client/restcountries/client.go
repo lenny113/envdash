@@ -4,12 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"golang.org/x/time/rate"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	"golang.org/x/time/rate"
 )
 
 type RestCountriesClient interface {
@@ -203,22 +204,29 @@ func decodeRESTCountriesResponse(body []byte, askedUsingISO bool) (RestCountries
 	result := RestCountries_INT_Response{}
 
 	if src.Name.Common != "" {
-		result.Country = &src.Name.Common
+		country := src.Name.Common
+		result.Country = &country
 	}
 	if src.CCA2 != "" {
-		result.CCA2 = &src.CCA2
+		cca2 := src.CCA2
+		result.CCA2 = &cca2
 	}
+
 	if len(src.Capital) > 0 {
-		result.Capital = &src.Capital[0]
+		capital := src.Capital[0]
+		result.Capital = &capital
 	}
+
 	if len(src.LatLng) >= 2 {
-		result.Coordinates = &src.LatLng
+		coords := append([]float64(nil), src.LatLng...)
+		result.Coordinates = &coords
 	}
-	result.Population = &src.Population
-	result.Area = &src.Area
-	if len(src.Borders) > 0 {
-		result.Borders = &src.Borders
-	}
+
+	population := src.Population
+	result.Population = &population
+
+	area := src.Area
+	result.Area = &area
 	if len(src.Currencies) > 0 {
 		codes := make([]string, 0, len(src.Currencies))
 		for code := range src.Currencies {
@@ -226,7 +234,6 @@ func decodeRESTCountriesResponse(body []byte, askedUsingISO bool) (RestCountries
 		}
 		result.Currencies = &codes
 	}
-
 	return result, nil
 }
 

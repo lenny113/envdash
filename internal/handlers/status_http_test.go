@@ -30,3 +30,9 @@ func newTestStatusHandler(t *testing.T) *StatusHandler {
 		time.Now().Add(-10*time.Second),
 	)
 }
+
+type mockStatusStore struct{}
+
+func (m *mockStatusStore) DB_Status(ctx context.Context) bool {
+	return true
+}

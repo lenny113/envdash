@@ -3,8 +3,8 @@ package handlers
 import (
 	model "assignment-2/internal/models"
 	"assignment-2/internal/utils"
-	//"assignment-2/internal/store"
-	"crypto/md5"   //for generarting hash to create api key
+	"crypto/md5" //for generarting hash to create api key
+	"crypto/rand"
 	"encoding/hex" //for converting md5 hash to string
 	"encoding/json"
 	"net/http"
@@ -20,6 +20,16 @@ type Login struct {
 type Key struct {
 	ApiKey    string `json:"key"`
 	CreatedAt string `json:"createdAt"`
+}
+
+func (h *Handler) Auth(w http.ResponseWriter, r *http.Request) {
+	PathValue := r.PathValue("id")
+	if PathValue == "" {
+		h.RegisterAuth(w, r)
+		return
+	} else {
+		h.DeleteAuth(w, r, PathValue)
+	}
 }
 
 /*
@@ -150,10 +160,16 @@ func createAPIKey(email string) (string, string) {
 
 	timeCreateApi := time.Now().Format("20060102 15:04") //this is the format specified in the assignement for time
 
+	b := make([]byte, 16)
+	_, err := rand.Read(b)
+	if err != nil {
+		panic(err) // eller håndter bedre
+	}
+
 	// Generate hash of email + current time using md5
 	//this will be used as the api key for the user, and will be unique for each registration
 	//unique even, even same email cant make same key, because of the time component
-	hash := md5.Sum([]byte(email + time.Now().String()))
+	hash := md5.Sum([]byte(email + time.Now().String() + hex.EncodeToString(b)))
 	hashString := hex.EncodeToString(hash[:])
 	createAPI := utils.STARTOFUSERAPI + hashString
 
@@ -173,7 +189,7 @@ func isValidEmail(email string) bool {
 	return address != nil
 }
 
-func (h *Handler) DeleteAuth(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) DeleteAuth(w http.ResponseWriter, r *http.Request, ApiToDelete string) {
 	//used in handling connection to Firestore
 	ctx := r.Context()
 
@@ -183,25 +199,29 @@ func (h *Handler) DeleteAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	API := r.PathValue("id")
-
-	if API == "" {
-		utils.SetMessageForLogger(w, "DELETE_AUTH_FAIL: missing id param")
-		writeJSONError(w, http.StatusBadRequest, "missing id")
-		return
-	}
-
-	//Checks if api key exists
-	if !h.store.ApiKeyExists(ctx, API) {
-		writeJSONError(w, http.StatusNotFound, "could not find API key")
-		utils.SetMessageForLogger(w, "could not find API key")
+	//Checks if api key exists middelware can not do this because of routing issues
+	ApiUserAuth := r.Header.Get("X-Api-Key")
+	if !h.store.ApiKeyExists(ctx, ApiUserAuth) {
+		//extended message, two api keys here, so need to be carefull so the user understand
+		writeJSONError(w, http.StatusForbidden, "Looks like your api key in header are wrong")
+		utils.SetMessageForLogger(w, "api key in header are wrong")
 		return
 	}
 
 	//we have to delete this key in firestore
-	err := h.store.DeleteAPIkey(ctx, API)
+	err := h.store.DeleteAPIkey(ctx, ApiToDelete, ApiUserAuth)
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "something went wrong in Firestore, while trying to delete apikey")
+
+		if err.Error() == "api key not found" {
+			writeJSONError(w, http.StatusNotFound, "Can not find API key you want to delete")
+
+		} else if err.Error() == "unauthorized" {
+			writeJSONError(w, http.StatusForbidden, "Not allowed to delete someone else's api key!")
+
+		} else {
+			writeJSONError(w, http.StatusInternalServerError, "Something went wrong when deleting api key")
+		}
+
 		messageForLogger := "Problem in firestore, while trying to delete apikey: " + err.Error()
 		utils.SetMessageForLogger(w, messageForLogger)
 		return

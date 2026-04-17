@@ -6,6 +6,7 @@ import (
 	weatherclient "assignment-2/internal/client/openmeteo"
 	countryclient "assignment-2/internal/client/restcountries"
 	utils "assignment-2/internal/utils"
+	"context"
 	"encoding/json"
 	"net/http"
 	"sync"
@@ -13,8 +14,8 @@ import (
 )
 
 type StatusStore interface {
-	NotificationDBStatus() int
-	WebhookCount() int
+	DB_Status(ctc context.Context) bool
+	CountFirestore(ctx context.Context, collection string) (int, error)
 }
 
 type StatusHandler struct {
@@ -62,6 +63,7 @@ func NewStatusHandler(
 }
 
 func (h *StatusHandler) GetStatus(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	h.mu.Lock()
 	if h.cached != nil && time.Since(h.lastRefresh) < h.refreshEvery {
 		resp := *h.cached
@@ -80,8 +82,8 @@ func (h *StatusHandler) GetStatus(w http.ResponseWriter, r *http.Request) {
 		MeteoAPI:       probeMeteoAPI(h.weatherClient),
 		OpenAQAPI:      probeOpenAQAPI(h.aqClient),
 		CurrencyAPI:    probeCurrencyAPI(h.currencyClient),
-		NotificationDB: probeNotificationDB(h.store),
-		Webhooks:       getWebhookCount(h.store),
+		NotificationDB: h.probeNotificationDB(ctx),
+		Webhooks:       h.count(ctx, "all_notifications"),
 		Version:        utils.VERSION,
 		Uptime:         int64(time.Since(h.startedAt).Seconds()),
 	}
@@ -158,12 +160,22 @@ func probeCurrencyAPI(client currencyclient.CurrencyClient) int {
 	return http.StatusOK
 }
 
-func probeNotificationDB(store StatusStore) int {
-	// TODO: implement real notification database probe
+func (h *StatusHandler) probeNotificationDB(ctx context.Context) int {
+	if h.store == nil {
+		return http.StatusInternalServerError
+	}
+
+	if !h.store.DB_Status(ctx) {
+		return http.StatusInternalServerError
+	}
 	return http.StatusOK
 }
 
-func getWebhookCount(store StatusStore) int {
-	// TODO: implement real webhook count lookup
-	return 0
+func (h *StatusHandler) count(ctx context.Context, collection string) int {
+
+	count, err := h.store.CountFirestore(ctx, collection)
+	if err != nil {
+		return 0
+	}
+	return count
 }

@@ -19,7 +19,7 @@ func TestOpenAQClient_GetInfo_PM25AndPM10(t *testing.T) {
 		Timeout: 20 * time.Second,
 	}
 
-	aqclient.NewOpenAQClient(httpClient, os.Getenv("OPENAQ_API_KEY"))
+	openAQClient := NewOpenAQClient(httpClient, os.Getenv("OPENAQ_API_KEY"))
 
 	data, err := openAQClient.GetInfo(OpenAQ_InformationRequest{
 		ISOCode: "NO",
@@ -57,7 +57,7 @@ func TestOpenAQClient_GetInfo_WithTrimmedLowercaseISOCode(t *testing.T) {
 		Timeout: 20 * time.Second,
 	}
 
-	openAQClient := NewOpenAQClient(httpClient)
+	openAQClient := NewOpenAQClient(httpClient, os.Getenv("OPENAQ_API_KEY"))
 
 	data, err := openAQClient.GetInfo(OpenAQ_InformationRequest{
 		ISOCode: " no ",

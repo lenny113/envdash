@@ -1,0 +1,18 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${PORT:-8080}:$8080"
+
+    env_file:
+      - .env
+
+    secrets:
+      - Firebase
+    restart: unless-stopped
+
+secrets:
+  Firebase:
+    file: ./firestore_auth.json

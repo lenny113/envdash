@@ -147,9 +147,6 @@ func TestDecodeRESTCountriesResponse_ISO(t *testing.T) {
 	if data.Area == nil || *data.Area != 323802 {
 		t.Fatalf("expected Area 323802, got %#v", data.Area)
 	}
-	if data.Borders == nil || len(*data.Borders) != 3 {
-		t.Fatalf("expected 3 borders, got %#v", data.Borders)
-	}
 	if data.Currencies == nil || len(*data.Currencies) != 1 {
 		t.Fatalf("expected 1 currency, got %#v", data.Currencies)
 	}

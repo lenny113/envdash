@@ -3,7 +3,6 @@ package handlers
 import (
 	model "assignment-2/internal/models"
 	"assignment-2/internal/utils"
-	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -54,7 +53,7 @@ func (h *Handler) RegistrationPostHandler(w http.ResponseWriter, r *http.Request
 	var reg model.Registration
 
 	//getting hashed apiKey from request header
-	apiKey := getAndHashAPIKey(r)
+	apiKey := GetAndHashAPIKey(r)
 
 	//Checking if the hashed APIKey exists in firestore
 	if !(h.store.ApiKeyExists)(r.Context(), apiKey) {
@@ -111,7 +110,7 @@ func (h *Handler) RegistrationPostHandler(w http.ResponseWriter, r *http.Request
 
 	//Writing response body for the user
 	json.NewEncoder(w).Encode(response)
-	h.CheckLifecycleNotifications(r.Context(), reg.IsoCode, "REGISTER")
+	h.CheckLifecycleNotifications(r.Context(), resolveIsoCode(reg.IsoCode, reg.Country), "REGISTER")
 
 }
 
@@ -207,9 +206,9 @@ func validateRegistration(reg *model.Registration) (error, string) {
 func (h *Handler) RegistrationGetHandler(w http.ResponseWriter, r *http.Request) {
 
 	//Getting registration id from path
-	id := getIDFromPath(r.URL.Path)
+	id := getIDFromRegPath(r.URL.Path)
 	//getting apikey from request header and hashing it
-	apiKey := getAndHashAPIKey(r)
+	apiKey := GetAndHashAPIKey(r)
 
 	//Cheking if the hashed api key exists in firestore
 	if !(h.store.ApiKeyExists)(r.Context(), apiKey) {
@@ -235,7 +234,6 @@ func (h *Handler) RegistrationGetHandler(w http.ResponseWriter, r *http.Request)
 		}
 
 		//to send notification that a reg of this country is fetched
-		h.CheckLifecycleNotifications(r.Context(), registration.IsoCode, "INVOKE") //we have to know what country, then send notifications
 
 		enc := json.NewEncoder(w)
 
@@ -260,9 +258,9 @@ func (h *Handler) RegistrationGetHandler(w http.ResponseWriter, r *http.Request)
 func (h *Handler) RegistrationPutHandler(w http.ResponseWriter, r *http.Request) {
 
 	//Getting registration id from path
-	id := getIDFromPath(r.URL.Path)
+	id := getIDFromRegPath(r.URL.Path)
 	//getting apikey from request header and hashing it
-	apiKey := getAndHashAPIKey(r)
+	apiKey := GetAndHashAPIKey(r)
 
 	//Checking if hashed apikey exists in firestore
 	if !(h.store.ApiKeyExists)(r.Context(), apiKey) {
@@ -316,13 +314,13 @@ func (h *Handler) RegistrationPutHandler(w http.ResponseWriter, r *http.Request)
 	//Encoding the new registration for the user
 	json.NewEncoder(w).Encode(reg)
 	//Sending lifecycle notification for update of registration, we have to know the country of the registration to send the correct notifications
-	h.CheckLifecycleNotifications(r.Context(), reg.IsoCode, "UPDATE")
+	h.CheckLifecycleNotifications(r.Context(), reg.IsoCode, "CHANGE")
 }
 
 // RegistrationDeleteHandler handles the deletion of a registration with a given id
 func (h *Handler) RegistrationDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	//Getting id from url path
-	id := getIDFromPath(r.URL.Path)
+	id := getIDFromRegPath(r.URL.Path)
 	if id == "" {
 		//Writing JSON error to user with status 400 BAD REQUEST
 		writeJSONError(w, http.StatusBadRequest, "Missing id")
@@ -330,7 +328,7 @@ func (h *Handler) RegistrationDeleteHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	//fetching apikey from request header and hashing it
-	apiKey := getAndHashAPIKey(r)
+	apiKey := GetAndHashAPIKey(r)
 
 	//Check if hashed apikey exists in firestore
 	if !(h.store.ApiKeyExists)(r.Context(), apiKey) {
@@ -346,6 +344,7 @@ func (h *Handler) RegistrationDeleteHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	RegistrationIso := reg.IsoCode
+	RegistrationCountry := reg.Country
 	//Deleting specified registration from firestore if found under provided apikey
 	err = h.store.DeleteRegistration(r.Context(), apiKey, id)
 	if err != nil {
@@ -362,7 +361,7 @@ func (h *Handler) RegistrationDeleteHandler(w http.ResponseWriter, r *http.Reque
 	w.Write([]byte("Registration with id " + id + " successfully deleted")) //Writing result to user
 
 	//Sending lifecycle notification for deletion of registration, we have to know the country of the registration to send the correct notifications
-	h.CheckLifecycleNotifications(r.Context(), RegistrationIso, "DELETE")
+	h.CheckLifecycleNotifications(r.Context(), resolveIsoCode(RegistrationIso, RegistrationCountry), "DELETE")
 }
 
 // RegistrationHeadHandler handles gets the head of the response when querying for one or all registrations
@@ -370,9 +369,9 @@ func (h *Handler) RegistrationDeleteHandler(w http.ResponseWriter, r *http.Reque
 
 func (h *Handler) RegistrationHeadHandler(w http.ResponseWriter, r *http.Request) {
 	//getting registration id from URL path
-	id := getIDFromPath(r.URL.Path)
+	id := getIDFromRegPath(r.URL.Path)
 	//Getting apikey from request header and hashing it, then store it in the apiKey variable
-	apiKey := getAndHashAPIKey(r)
+	apiKey := GetAndHashAPIKey(r)
 
 	//Check if the API key exists in firestore
 	if !(h.store.ApiKeyExists)(r.Context(), apiKey) {
@@ -427,9 +426,9 @@ func (h *Handler) RegistrationOptionsHandler(w http.ResponseWriter, r *http.Requ
 func (h *Handler) RegistrationPatchHandler(w http.ResponseWriter, r *http.Request) {
 
 	//Get registration id from url path
-	id := getIDFromPath(r.URL.Path)
+	id := getIDFromRegPath(r.URL.Path)
 	//Getting API-key from request header, hashing it and storing it in the apiKey variable
-	apiKey := getAndHashAPIKey(r)
+	apiKey := GetAndHashAPIKey(r)
 
 	//Check if APIkey exists in firestore
 	if !(h.store.ApiKeyExists)(r.Context(), apiKey) {
@@ -492,29 +491,15 @@ func (h *Handler) RegistrationPatchHandler(w http.ResponseWriter, r *http.Reques
 	utils.SetMessageForLogger(w, "patched "+id)
 
 	w.WriteHeader(http.StatusNoContent) //set HTTP status code to 204 "NO CONTENT"
-	h.CheckLifecycleNotifications(r.Context(), updated.IsoCode, "UPDATE")
+	h.CheckLifecycleNotifications(r.Context(), resolveIsoCode(updated.IsoCode, updated.Country), "CHANGE")
 }
 
 // Extract id from path
-func getIDFromPath(path string) string {
+func getIDFromRegPath(path string) string {
 	//Trimming prefix so that we are left with the id provided by the user
 	id := strings.TrimPrefix(path, utils.REGISTRATION_PATH)
 	//Removing eventual remaining frontslashes  and returning registration id
 	return strings.Trim(id, "/")
-}
-
-// getAndHashAPIKey gets the api key from the request header, hashes it if it exists and returns it
-func getAndHashAPIKey(r *http.Request) string {
-	apiKey := strings.TrimSpace(r.Header.Get("X-API-Key"))
-	//not key provided, return nothing
-	if apiKey == "" {
-		return ""
-	}
-
-	//key provided so we hash the key with the SHA256 algorithm
-	apiKeyHash := sha256.Sum256([]byte(apiKey))
-	//returning hashed key as a string
-	return fmt.Sprintf("%x", apiKeyHash)
 }
 
 // checkIsoCodeLength checks if the isocode provided is the appropriate length and returns an

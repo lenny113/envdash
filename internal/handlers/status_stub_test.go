@@ -7,6 +7,7 @@ import (
 	aqclient "assignment-2/internal/client/openaq"
 	weatherclient "assignment-2/internal/client/openmeteo"
 	countryclient "assignment-2/internal/client/restcountries"
+	"context"
 	"testing"
 	"time"
 )
@@ -43,6 +44,16 @@ func (s *stubCurrencyClient) GetSelectedExchangeRates(baseCurrency string) (curr
 	return currencyclient.Currency_INT_Response{}, s.err
 }
 
+type mockStatusStore struct{}
+
+func (m *mockStatusStore) DB_Status(ctx context.Context) bool {
+	return true
+}
+
+func (m *mockStatusStore) CountFirestore(ctx context.Context, collection string) (int, error) {
+	return 0, nil
+}
+
 func newTestStatusHandler(t *testing.T) *StatusHandler {
 	t.Helper()
 
@@ -51,7 +62,7 @@ func newTestStatusHandler(t *testing.T) *StatusHandler {
 		&stubWeatherClient{},
 		&stubAQClient{},
 		&stubCurrencyClient{},
-		nil,
+		&mockStatusStore{},
 		time.Now().Add(-10*time.Second),
 	)
 }

@@ -1,3 +1,4 @@
 .idea
 requests.log
 secret.json
+firestore_auth.json

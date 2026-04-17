@@ -1,0 +1,26 @@
+FROM golang:1.25 AS builder
+
+WORKDIR /app
+
+# Go modules
+COPY go.mod /app/go.mod
+COPY go.sum /app/go.sum
+RUN go mod download
+
+# Only code needed from our project
+COPY cmd /app/cmd
+COPY internal /app/internal
+
+# Build binary
+RUN CGO_ENABLED=0 GOOS=linux go build -o executable ./cmd/envdash
+
+
+FROM alpine:3.19
+
+WORKDIR /app
+
+COPY --from=builder /app/executable .
+
+EXPOSE 8080
+
+ENTRYPOINT ["./executable"]

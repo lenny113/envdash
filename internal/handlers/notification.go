@@ -56,7 +56,8 @@ func (h *Handler) registerNewNotification(w http.ResponseWriter, r *http.Request
 		writeJSONError(w, http.StatusBadRequest, "Invalid JSON in notification registration")
 		return
 	}
-	request.Event = strings.ToUpper(request.Event) //convert event to uppercase to make it case insensitive
+	request.Country = strings.ToUpper(request.Country) //convert country to uppercase
+	request.Event = strings.ToUpper(request.Event)     //convert event to uppercase to make it case insensitive
 
 	//checks if the required fields are present and valid, if not, it returns an error with the specific missing fields
 	err, errorMessage := validateNotification(request)
@@ -97,7 +98,9 @@ func (h *Handler) registerNewNotification(w http.ResponseWriter, r *http.Request
 
 	//adding api key to the request struct, so we can store it under the assosiated user
 	api := r.Header.Get("X-Api-Key")
-
+	//adding time created:
+	timeCreated := time.Now().Format("20060102 15:04")
+	request.Time = timeCreated
 	//Stores in Firestore
 	notificationId, err := h.store.CreateNotification(r.Context(), request, api)
 	if err != nil {
@@ -107,17 +110,10 @@ func (h *Handler) registerNewNotification(w http.ResponseWriter, r *http.Request
 		return
 	}
 	//time created
-	timeCreated := time.Now().Format("20060102 15:04")
 
 	//After successful creation of notification, it returns a success message:
 	var response models.RegisteredWebhookResponse
 	response.Id = notificationId
-	response.Country = request.Country
-	response.Event = request.Event
-	response.Time = timeCreated
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
 
 	responseJSON, err := json.MarshalIndent(response, "", "   ")
 	if err != nil {
@@ -125,9 +121,9 @@ func (h *Handler) registerNewNotification(w http.ResponseWriter, r *http.Request
 		writeJSONError(w, http.StatusInternalServerError, "Error marshaling response JSON in notification registration")
 		return
 	}
-
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
 	w.Write(responseJSON)
-
 }
 
 func validateNotification(request models.RegisterWebhook) (error, string) {
@@ -184,7 +180,11 @@ func (h *Handler) allNotifications(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if AllSaved == nil {
-		writeJSONError(w, http.StatusOK, "You have no stored notifications yet")
+		AllSaved = []models.AllRegisteredWebhook{}
+		//Spec says we should return with no message if empty
+		//http.StatusOK
+		//How do we now send this message?
+
 		utils.SetMessageForLogger(w, "No stored notifications for user")
 		return
 	}
@@ -335,7 +335,7 @@ func (h *Handler) CheckLifecycleNotifications(ctx context.Context, country strin
 	//to handle anny formating errors with country codes, we convert to uppercase
 	country = strings.ToUpper(country)
 	for _, notification := range allNotifications {
-		countryMatch := notification.Country == "" || notification.Country == country
+		countryMatch := notification.Country == "" || strings.EqualFold(notification.Country, country)
 		eventMatch := notification.Event == event
 
 		if countryMatch && eventMatch {
@@ -356,7 +356,7 @@ func (h *Handler) CheckThresholdNotifications(ctx context.Context, country strin
 	}
 
 	for _, notification := range allNotifications {
-		countryMatch := notification.Country == "" || strings.ToUpper(notification.Country) == strings.ToUpper(country)
+		countryMatch := notification.Country == "" || strings.EqualFold(notification.Country, country)
 		eventMatch := notification.Event == "THRESHOLD"
 		threshold := notification.ThresholdNotification
 		if countryMatch && eventMatch && threshold != nil {
@@ -378,8 +378,6 @@ func (h *Handler) CheckThresholdNotifications(ctx context.Context, country strin
 				conditionMet = measuredValue <= threshold.Value
 			case "==":
 				conditionMet = measuredValue == threshold.Value
-			case "!=":
-				conditionMet = measuredValue != threshold.Value
 			default:
 				utils.SetMessageForLogger(nil, "Invalid operator in threshold notification: "+threshold.Operator)
 				continue
@@ -454,4 +452,25 @@ func (h *Handler) GetRegWithOnlyIdForNotification(ctx context.Context, apiKey st
 		return
 	}
 	h.CheckLifecycleNotifications(ctx, registration.IsoCode, event)
+}
+
+func resolveIsoCode(isoCode string, country string) string {
+	if isoCode != "" {
+		return strings.ToUpper(isoCode)
+	}
+	if country == "" {
+		//then we have ISO code
+		return ""
+	}
+	// get the map with all names and iso codes
+	cMap, err := getCountryNameAndIsoMap()
+	if err != nil {
+		return ""
+	}
+	for iso, name := range cMap {
+		if strings.EqualFold(name, country) {
+			return iso
+		}
+	}
+	return ""
 }

@@ -6,6 +6,7 @@ type RegisterWebhook struct {
 	Event                 string                 `json:"event"`
 	ThresholdNotification *ThresholdNotification `json:"threshold,omitempty" firestore:"threshold,omitempty"`
 	User                  string                 `json:"-" firestore:"user"`
+	Time                  string                 `json:"-" firestore:"time"`
 }
 
 type ThresholdNotification struct {
@@ -15,10 +16,7 @@ type ThresholdNotification struct {
 }
 
 type RegisteredWebhookResponse struct {
-	Id      string `json:"id"`
-	Country string `json:"country"`
-	Event   string `json:"event"`
-	Time    string `json:"time"`
+	Id string `json:"id"`
 }
 
 type AllRegisteredWebhook struct {
