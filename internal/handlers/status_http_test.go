@@ -9,11 +9,25 @@ import (
 	weatherclient "assignment-2/internal/client/openmeteo"
 	countryclient "assignment-2/internal/client/restcountries"
 	utils "assignment-2/internal/utils"
+	"context"
 	"os"
 	"strings"
 	"testing"
 	"time"
 )
+
+// TODO: Replace mockStatusStore with a real Firestore integration setup for flaky tests.
+// For now, flaky tests use real external HTTP API calls and a mocked Firestore store
+// so the shared status tests can pass without local Firebase credentials.
+type mockStatusStore struct{}
+
+func (m *mockStatusStore) DB_Status(ctx context.Context) bool {
+	return true
+}
+
+func (m *mockStatusStore) CountFirestore(ctx context.Context, collection string) (int, error) {
+	return 0, nil
+}
 
 func newTestStatusHandler(t *testing.T) *StatusHandler {
 	t.Helper()
@@ -26,13 +40,7 @@ func newTestStatusHandler(t *testing.T) *StatusHandler {
 		weatherclient.NewWeatherClient(httpClient),
 		aqclient.NewOpenAQClient(httpClient, openAQAPIKey),
 		currencyclient.NewCurrencyClient(httpClient),
-		nil,
+		&mockStatusStore{},
 		time.Now().Add(-10*time.Second),
 	)
-}
-
-type mockStatusStore struct{}
-
-func (m *mockStatusStore) DB_Status(ctx context.Context) bool {
-	return true
 }
