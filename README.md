@@ -161,9 +161,9 @@ Example URL:
 |:------------|:-------------|
 | `200 OK`    | `text/html`  |
 
-This endpoint serves an interactive documentation page for the Envdash Application Programming Interface (API).
+This endpoint serves an interactive documentation page for the Envdash API.
 
-The page renders the OpenAPI Specification (OAS) automatically in the browser using Swagger UI, and allows you to:
+The page renders the OpenAPI Specification automatically in the browser using Swagger UI, and allows you to:
 
 - inspect all available endpoints
 - view request and response schemas
