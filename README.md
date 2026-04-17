@@ -153,7 +153,276 @@ Must be connected to NTNU Internal Network to access.
 
 ## API Reference / Documentation
 <details>
-<summary> <h2> Acquire Api Key </h2> </summary>
+<summary><h4>Register a Country to get information for:</h4></summary>
+
+```http
+POST /envdash/v1/registrations/
+```
+
+| Header          | Type     | Description                |
+|:----------------|:---------|:---------------------------|
+| `X-API-Key`     | `string` | **Required**. Your API key |
+
+#### Example Request Body:
+
+```json
+{
+    "country": "Norway",
+    "isoCode": "NO",
+    "features": {
+        "temperature": true,
+        "precipitation": true,
+        "capital": true,
+        "coordinates": true,
+        "population": true,
+        "area": true,
+        "targetCurrencies": ["JPY", "usd", "EUR"]
+    }
+}
+```
+
+> `country` and `isoCode` are case-insensitive. At least one must be provided. If both are provided, they must match.
+> `targetCurrencies` is case-insensitive. Maximum 10 currencies.
+
+#### Response:
+
+| Status Code   | Content-Type       |
+|:--------------|:-------------------|
+| `201 Created` | `application/json` |
+
+```json
+{
+    "id": "your-registration-id",
+    "lastChange": "20060102 15:04"
+}
+```
+
+</details>
+
+<details>
+<summary><h4>Retrieve all registered countries:</h4></summary>
+
+```http
+GET /envdash/v1/registrations/
+```
+
+| Header      | Type     | Description                |
+|:------------|:---------|:---------------------------|
+| `X-API-Key` | `string` | **Required**. Your API key |
+
+#### Response:
+
+| Status Code | Content-Type       |
+|:------------|:-------------------|
+| `200 OK`    | `application/json` |
+
+```json
+[
+    {
+        "id": "your-registration-id",
+        "country": "Norway",
+        "isoCode": "NO",
+        "features": {
+            "temperature": true,
+            "precipitation": true,
+            "capital": true,
+            "coordinates": true,
+            "population": true,
+            "area": true,
+            "targetCurrencies": ["JPY", "USD", "EUR"]
+        },
+        "lastChange": "20060102 15:04"
+    }
+]
+```
+
+</details>
+
+<details>
+<summary><h4>Retrieve a specific registered country:</h4></summary>
+
+```http
+GET /envdash/v1/registrations/{ID}
+```
+
+| Parameter / Header | Type     | Description                       |
+|:-------------------|:---------|:----------------------------------|
+| `X-API-Key`        | `string` | **Required**. Your API key        |
+| `ID`               | `string` | **Required**. Your registration ID |
+
+#### Response:
+
+| Status Code | Content-Type       |
+|:------------|:-------------------|
+| `200 OK`    | `application/json` |
+
+```json
+{
+    "id": "your-registration-id",
+    "country": "Norway",
+    "isoCode": "NO",
+    "features": {
+        "temperature": true,
+        "precipitation": true,
+        "capital": true,
+        "coordinates": true,
+        "population": true,
+        "area": true,
+        "targetCurrencies": ["JPY", "USD", "EUR"]
+    },
+    "lastChange": "20060102 15:04"
+}
+```
+
+</details>
+
+<details>
+<summary><h4>Replace a registered country:</h4></summary>
+
+```http
+PUT /envdash/v1/registrations/{ID}
+```
+
+| Parameter / Header | Type     | Description                        |
+|:-------------------|:---------|:-----------------------------------|
+| `X-API-Key`        | `string` | **Required**. Your API key         |
+| `ID`               | `string` | **Required**. Your registration ID |
+
+#### Example Request Body:
+
+```json
+{
+   "country": "Norway",
+   "isoCode": "NO",
+   "features": {
+      "temperature": true,
+      "precipitation": true,
+      "airQuality": true,
+      "capital": true,
+      "coordinates": true,
+      "population": true,
+      "area": true,
+      "targetCurrencies": ["EUR", "USD", "SEK"]
+   },
+}
+
+
+```
+
+#### Response:
+
+| Status Code | Content-Type       |
+|:------------|:-------------------|
+| `200 OK`    | `application/json` |
+
+Returns the updated registration object.
+
+</details>
+
+<details>
+<summary><h4>Partially update a registered country:</h4></summary>
+
+```http
+PATCH /envdash/v1/registrations/{ID}
+```
+
+| Parameter / Header | Type     | Description                        |
+|:-------------------|:---------|:-----------------------------------|
+| `X-API-Key`        | `string` | **Required**. Your API key         |
+| `ID`               | `string` | **Required**. Your registration ID |
+
+#### Example Request Body (all fields optional):
+
+```json
+{
+    "country": "Sweden",
+    "isoCode": "SE",
+    "features": {
+        "temperature": false,
+        "targetCurrencies": ["EUR"]
+    }
+}
+```
+
+#### Response:
+
+| Status Code      |
+|:-----------------|
+| `204 No Content` |
+
+</details>
+
+<details>
+<summary><h4>Delete a registered country:</h4></summary>
+
+```http
+DELETE /envdash/v1/registrations/{ID}
+```
+
+| Parameter / Header | Type     | Description                        |
+|:-------------------|:---------|:-----------------------------------|
+| `X-API-Key`        | `string` | **Required**. Your API key         |
+| `ID`               | `string` | **Required**. Your registration ID |
+
+#### Response:
+
+| Status Code      |
+|:-----------------|
+| `204 No Content` |
+
+</details>
+
+<details>
+<summary><h4>Get dashboard data for a registered country:</h4></summary>
+
+```http
+GET /envdash/v1/dashboards/{ID}
+```
+
+| Parameter / Header | Type     | Description                        |
+|:-------------------|:---------|:-----------------------------------|
+| `X-API-Key`        | `string` | **Required**. Your API key         |
+| `ID`               | `string` | **Required**. Your registration ID |
+
+#### Response:
+
+| Status Code | Content-Type       |
+|:------------|:-------------------|
+| `200 OK`    | `application/json` |
+
+```json
+{
+    "country": "Norway",
+    "isoCode": "NO",
+    "features": {
+        "temperature": 5.3,
+        "precipitation": 12.1,
+        "capital": "Oslo",
+        "coordinates": [60.472, 8.4689],
+        "population": 5379475,
+        "area": 323802.0,
+        "targetCurrencies": {
+            "JPY": 14.23,
+            "USD": 0.09,
+            "EUR": 0.085
+        },
+        "airQuality": {
+            "pm25": 10.0,
+            "pm10": 20.0,
+            "level": "good"
+        }
+    },
+    "lastRetrieval": "20060102 15:04"
+}
+```
+
+> `airQuality` is only included if air quality data is available. `level` is one of: `good`, `moderate`, `unhealthy for sensitive groups`, `unhealthy`, `hazardous`.
+
+</details>
+
+
+<details>
+<summary><h4>Register as a user to receive an API key:</h4></summary>
 
 Simply **POST** your name and email in JSON format to `/envdash/v1/auth/`
 
