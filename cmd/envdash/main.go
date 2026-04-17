@@ -105,6 +105,11 @@ func main() {
 	privateRouter := http.NewServeMux()
 	privateRouter.HandleFunc("/", handler.DefaultHandler)
 
+	router.HandleFunc("/envdash/v1/docs", handler.OpenAPIDocsHandler)
+	router.HandleFunc("/envdash/v1/docs/", handler.OpenAPIDocsHandler)
+	router.HandleFunc("/envdash/v1/openapi.json", handler.OpenAPISpecHandler)
+	router.HandleFunc("/envdash/v1/openapi.json/", handler.OpenAPISpecHandler)
+
 	//Dashboards
 	privateRouter.HandleFunc(utils.DASHBOARD_PATH, h.DashboardHandler)
 	privateRouter.HandleFunc(utils.DASHBOARD_PATH+"/", h.DashboardHandler)
