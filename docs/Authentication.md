@@ -68,7 +68,7 @@ Example URL:
 
 | Header      | Value: Type | Description                 |
 |:-----------|:------------|:----------------------------|
-| `x-api-key` | {YourAPIkey}       | Needs to be an api key from the same user. You have to be allowed to delete the key. You can delete your own key asswell |
+| `x-api-key` | {YourAPIkey}       | Needs to be an api key from the same user. You have to be allowed to delete the key. You can delete your own key as well |
 
 
 #### Response:
@@ -79,7 +79,7 @@ Example URL:
 
 When you get the 204, you know that the api key is deleted.
 If you receive any other status code, the API key was not deleted.
-You will get a helpfull error message, try using that to understand
+You will get a helpful error message, try using that to understand
 why the key cant be deleted.
 
 </details>
@@ -94,7 +94,8 @@ This allows the server to identify you without requiring login each time.
 Example usage, and Postman:
 
 ![You receive your api key](auth_img_1.png)
-![You use your api key](image.png)
+
+![You use your api key](auth_img_2.png)
 ---
 
 ### Dependencies
@@ -115,7 +116,9 @@ This makes duplicate keys extremely unlikely and allows users to create multiple
 ### How keys are stored on the server (security, scalability)
 Our database is designed to efficiently handle multiple users.
 
-We maintain a global collection called all_api_keys that enables fast lookups and I/O operations.
+We maintain a global collection called all_api_keys that enables very fast lookups and I/O operations.
+This is because we would eventually have very manny keys and almost all handlers uses api checks.
+
 Each API key is stored as a password using a SHA-256 hash, never in cleartext.
 
 Linking users to other functionality
