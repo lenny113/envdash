@@ -9,7 +9,7 @@ envdash is a REST API service designed to provide airquality and general informa
 ## Authors
 
 This code was developed by:
-TODO
+
 * [Bror Wetlesen Vedeld] [@[BroVed]]([profile-link])
 * [Lennart Krogh] [@[Lennart]]([profile-link])
 * [Your Name] [@[username]]([profile-link])
@@ -200,7 +200,7 @@ Example URL:
 
 | Header      | Value: Type | Description                 |
 |:-----------|:------------|:----------------------------|
-| `x-api-key` | {YourAPIkey}       | Needs to be an api key from the same user. You have to be allowed to delete the key. You can delete your own key asswell |
+| `X-API-Key` | {YourAPIkey}       | Needs to be an api key from the same user. You have to be allowed to delete the key. You can delete your own key as well |
 
 
 #### Response:
@@ -211,7 +211,7 @@ Example URL:
 
 When you get the 204, you know that the api key is deleted.
 If you receive any other status code, the API key was not deleted.
-You will get a helpfull error message, try using that to understand
+You will get a helpful error message, try using that to understand
 why the key cant be deleted.
 
 </details>
@@ -559,7 +559,7 @@ Simply **POST** your notification query with correct body `/envdash/v1/notificat
 POST /envdash/v1/notifications/
 ```
 Body:
-We have two type of notificaitons, lifecycle and threshold:
+We have two type of notifications, lifecycle and threshold:
 ````json
 {
    "url":     "https://webhook.site/your-unique-URL",
@@ -619,8 +619,8 @@ Body:
 ìd:   IdOfYourNotifcation
 }
 ````
-You have now created a notfication, it wil send a webhook when the
-event you registerd is fulfilled
+You have now created a notfication, it will send a webhook when the
+event you registered is fulfilled
 
 </details>
 
@@ -691,7 +691,7 @@ Example URL:
 | `200 OK`    | `application/json` |
 
 
-You wil now see every notification registerd to your account
+You will now see every notification registered to your account
 ``` json
 {
 [
@@ -744,8 +744,8 @@ Example URL:
 | `204 No Content`    | `application/json` |
 
 You have now deleted your notification.
-Remember, you can not delete someone leses notification
-This is desided on your api key you use in header.
+Remember, you can not delete someone else's notification
+This is decided on your api key you use in header.
 
 </details>
 
