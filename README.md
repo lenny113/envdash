@@ -623,8 +623,6 @@ event you registered is fulfilled
 
 </details>
 
---- 
-
 <details>
 <summary><h4> Retrieve a Specific Webhook  </h4></summary>
 
@@ -666,10 +664,6 @@ Body:
 [Notification fields can be found:](./docs/notification.md)
 
 </details>
-
----
-[Authentication](./docs/Authentication.md)
-[Notifications system](./docs/notification.md)
 
 <details>
 <summary> <h4> List All Your Registered Webhooks </h4> </summary>
@@ -722,9 +716,6 @@ You will now see every notification registered to your account
 
 </details>
 
----
-
-
 <details>
 
 <summary> <h4> Delete Notification </h4> </summary>
@@ -751,9 +742,6 @@ Remember, you can not delete someone else's notification
 This is decided on your api key you use in header.
 
 </details>
-
----
-
 
 ## Prerequisites
 
@@ -788,11 +776,24 @@ git clone https://github.com/lenny113/Cloud.git
 cd ./cmd/envdash
 ```
 
+* Set environment variables (note this is powershell, if you are on linux or mac the commands may differ) 
+```powershell
+$env:FIREBASE_CREDENTIALS_FILE="C:\path\to\firebase-credentials.json"
+$env:OPENAQ_API_KEY="your_openaq_api_key"
+$env:PORT="8080"
+go run .
+```
+
+* Run the command 
+```bash
+go run .
+```
+
 ## Deployment
 
 ### Extra Prerequisites
 
-In addition to the previous Prerequisites, you also need:
+In addition to the previous Prerequisites, if you want to run a dockerized deployment you will also need:
 
 - Docker
 - Docker Compose (included with Docker Desktop)
@@ -807,7 +808,6 @@ Step 1 (apt repository) can be skipped if you already have it installed
 ```bash
 git clone https://github.com/lenny113/envdash.git
 cd envdash
-docker compose build
 ```
 ### 2. Create the environment file
 
@@ -819,7 +819,7 @@ OPENAQ_API_KEY=your_openaq_api_key_here
 EOF
 ```
 
->you can change the exposed port, with adding `PORT=1234` as part of your `.env` file
+>you can change the exposed port, with adding `PORT=Your_port` as part of your `.env` file
 
 Or manually create `.env` with the following content:
 
@@ -848,7 +848,6 @@ Test this by running:
 ```bash
 curl http://localhost:8080
 ```
-
 
 ### Useful commands
 
