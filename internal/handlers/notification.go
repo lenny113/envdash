@@ -180,14 +180,13 @@ func (h *Handler) allNotifications(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if AllSaved == nil {
-		AllSaved = []models.AllRegisteredWebhook{}
-		//Spec says we should return with no message if empty
-		//http.StatusOK
-		//How do we now send this message?
-
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("[]")) // tom array, ikke null
 		utils.SetMessageForLogger(w, "No stored notifications for user")
 		return
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	responseJSON, err := json.MarshalIndent(AllSaved, "", "   ")

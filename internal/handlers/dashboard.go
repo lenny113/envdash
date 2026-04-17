@@ -76,6 +76,27 @@ func (h *Handler) DashboardsGetHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Build measured map for threshold notifications
+	isoCode := resolveIsoCode(safeString(cacheResp.CountryCCA2), safeString(cacheResp.CountryName))
+
+	measured := map[string]float64{}
+	if cacheResp.MeanTemperature != nil {
+		measured["TEMPERATURE"] = *cacheResp.MeanTemperature
+	}
+	if cacheResp.MeanPrecipitation != nil {
+		measured["PRECIPITATION"] = *cacheResp.MeanPrecipitation
+	}
+	if cacheResp.MeanPM25 != nil {
+		measured["PM25"] = *cacheResp.MeanPM25
+	}
+	if cacheResp.MeanPM10 != nil {
+		measured["PM10"] = *cacheResp.MeanPM10
+	}
+
+	// Trigger both notification types
+	h.CheckLifecycleNotifications(r.Context(), isoCode, "INVOKE")
+	h.CheckThresholdNotifications(r.Context(), isoCode, measured)
+
 	// Assemble the dashboard response payload with all available features
 	dashboard := map[string]interface{}{
 		"country": safeString(cacheResp.CountryName),
