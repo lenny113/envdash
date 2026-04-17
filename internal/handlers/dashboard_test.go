@@ -82,8 +82,8 @@ func TestDashboardsGetHandler_Unauthorized(t *testing.T) {
 	w := httptest.NewRecorder()
 	h.DashboardsGetHandler(w, req)
 
-	if w.Code != http.StatusUnauthorized {
-		t.Errorf("expected 401, got %d", w.Code)
+	if w.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", w.Code)
 	}
 }
 

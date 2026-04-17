@@ -114,8 +114,8 @@ func TestPost_Unauthorized_Returns401(t *testing.T) {
 	h := newHandler()
 	body := `{"country": "Norway", "isoCode": "NO", "features": {"temperature": true}}`
 	rr := doRequest(t, h, http.MethodPost, regBase, body, map[string]string{"X-API-Key": "wrong"})
-	if rr.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d", rr.Code)
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d", rr.Code)
 	}
 }
 
@@ -182,8 +182,8 @@ func TestGet_AllRegistrations_ReturnsSlice(t *testing.T) {
 func TestGet_Unauthorized_Returns401(t *testing.T) {
 	h := newHandler()
 	rr := doRequest(t, h, http.MethodGet, regBase+"some-id", "", map[string]string{"X-API-Key": "bad"})
-	if rr.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d", rr.Code)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rr.Code)
 	}
 }
 
@@ -227,8 +227,8 @@ func TestPut_NonExistentID_Returns404(t *testing.T) {
 func TestPut_Unauthorized_Returns401(t *testing.T) {
 	h := newHandler()
 	rr := doRequest(t, h, http.MethodPut, regBase+"some-id", `{}`, map[string]string{"X-API-Key": "bad"})
-	if rr.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d", rr.Code)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rr.Code)
 	}
 }
 
@@ -269,8 +269,8 @@ func TestDelete_MissingID_Returns400(t *testing.T) {
 func TestDelete_Unauthorized_Returns401(t *testing.T) {
 	h := newHandler()
 	rr := doRequest(t, h, http.MethodDelete, regBase+"some-id", "", map[string]string{"X-API-Key": "bad"})
-	if rr.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d", rr.Code)
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d", rr.Code)
 	}
 }
 
@@ -304,9 +304,10 @@ func TestPatch_MissingID_Returns400(t *testing.T) {
 
 func TestPatch_Unauthorized_Returns401(t *testing.T) {
 	h := newHandler()
-	rr := doRequest(t, h, http.MethodPatch, regBase+"some-id", `{}`, map[string]string{"X-API-Key": "bad"})
-	if rr.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d", rr.Code)
+	id := seedRegistration(t, h)
+	rr := doRequest(t, h, http.MethodPatch, regBase+id, `{}`, map[string]string{"X-API-Key": "bad"})
+	if rr.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d", rr.Code)
 	}
 }
 
@@ -361,8 +362,8 @@ func TestHead_NonExistentID_Returns404(t *testing.T) {
 func TestHead_Unauthorized_Returns401(t *testing.T) {
 	h := newHandler()
 	rr := doRequest(t, h, http.MethodHead, regBase, "", map[string]string{"X-API-Key": "bad"})
-	if rr.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d", rr.Code)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rr.Code)
 	}
 }
 

@@ -1,7 +1,7 @@
 # Notification
 
 ###  Advanced Task
-Added authentication with Firestore as the storage backend. API keys determine who can register webhooks and what level of access they have when deleting notifications or listing all stored notifications.
+API keys determine who can register webhooks and what level of access they have when deleting notifications or listing all stored notifications.
 
 
 ## Parameters:
@@ -30,7 +30,7 @@ For threshold notificatoins:
 
 
 ### Design desisions
-We decided to allow everyone to look up notification IDs, regardless of whether they own them or not. This is intended to help combat spam. When you receive a webhook, the notification ID is included as well. It would be unwise to prevent the recipient from reading the notification they received.
+We decided to fully implement authenification in notifications, your notifications are tightly tied to your account
 
 ### How are we sending webhooks?
 
@@ -38,4 +38,4 @@ We decided to allow everyone to look up notification IDs, regardless of whether 
 Each time a registration or dashboard changes or deletes etc we check all notificaitons if they match a lifecycle event.
 
 #### Threshold
-We send a POST request for each time the cache is updated. This is the time we check each webhook for correlation.
+Each time a dashboard is retrieved (GET /dashboards/{id}), the live measured values are compared against all registered threshold webhooks. If a condition is met, a POST is sent to the registered URL.

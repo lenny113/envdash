@@ -132,14 +132,14 @@ func validateNotification(request models.RegisterWebhook) (error, string) {
 	if request.Url == "" {
 		errors = append(errors, "Missing URL")
 	} else {
-		_, err := url.ParseRequestURI(request.Url)
-		if err != nil {
-			errors = append(errors, "Invalid URL")
+		parsed, err := url.ParseRequestURI(request.Url)
+		if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+			errors = append(errors, "URL must start with http:// or https://")
 		}
 	}
 
 	//TODO: add check for valid country, maybe by checking if the country is in the list of countries we have in our database
-
+	//resolveIsoCode(request.Country)
 	//event check
 	if request.Event == "" {
 		errors = append(errors, "Missing Event in request body, valid events are:"+strings.Join(utils.VALIDEVENTS, ", "))
@@ -180,14 +180,13 @@ func (h *Handler) allNotifications(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if AllSaved == nil {
-		AllSaved = []models.AllRegisteredWebhook{}
-		//Spec says we should return with no message if empty
-		//http.StatusOK
-		//How do we now send this message?
-
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("[]")) // tom array, ikke null
 		utils.SetMessageForLogger(w, "No stored notifications for user")
 		return
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	responseJSON, err := json.MarshalIndent(AllSaved, "", "   ")
@@ -215,6 +214,13 @@ func (h *Handler) specificNotification(w http.ResponseWriter, r *http.Request) {
 		//if not found, return 404 error
 		utils.SetMessageForLogger(w, "Notification not found")
 		writeJSONError(w, http.StatusNotFound, "Notification not found")
+		return
+	}
+
+	//Checks ownership
+	userEmail, _ := h.store.FindUserWithApiKey(r.Context(), r.Header.Get("X-API-Key"))
+	if notification.User != userEmail {
+		writeJSONError(w, http.StatusForbidden, "Not allowed to view this notification")
 		return
 	}
 
@@ -416,14 +422,14 @@ func sendThresholdWebhook(id, country, url string, details models.ThresholdDetai
 	return postWebhook(url, payload)
 }
 
-func postWebhook(url string, payload map[string]interface{}) error {
+func postWebhook(targetUrl string, payload map[string]interface{}) error {
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
 		return err
 	}
 
 	client := &http.Client{Timeout: 5 * time.Second}
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(payloadBytes))
+	req, err := http.NewRequest(http.MethodPost, targetUrl, bytes.NewBuffer(payloadBytes))
 	if err != nil {
 		return err
 	}
@@ -439,19 +445,6 @@ func postWebhook(url string, payload map[string]interface{}) error {
 		return fmt.Errorf("unexpected status code %d", resp.StatusCode)
 	}
 	return nil
-}
-
-func (h *Handler) GetRegWithOnlyIdForNotification(ctx context.Context, apiKey string, id string, event string) {
-	//This function will be called right before a registration is deleted
-
-	//first it gets what country this registration is for
-	//TODO FIX
-	registration, err := h.store.GetRegistration(ctx, apiKey, id)
-	if err != nil {
-		//utils.SetMessageForLogger(w, "Error fetching registration from database", err)
-		return
-	}
-	h.CheckLifecycleNotifications(ctx, registration.IsoCode, event)
 }
 
 func resolveIsoCode(isoCode string, country string) string {

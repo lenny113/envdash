@@ -55,12 +55,6 @@ func (h *Handler) RegistrationPostHandler(w http.ResponseWriter, r *http.Request
 	//getting hashed apiKey from request header
 	apiKey := GetAndHashAPIKey(r)
 
-	//Checking if the hashed APIKey exists in firestore
-	if !(h.store.ApiKeyExists)(r.Context(), apiKey) {
-		writeJSONError(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
-
 	//Decode incoming JSON. If any of the features are not true or false, this will fail
 	//and this is why it is not added as a check in the "validateRegistration" function
 
@@ -210,13 +204,6 @@ func (h *Handler) RegistrationGetHandler(w http.ResponseWriter, r *http.Request)
 	//getting apikey from request header and hashing it
 	apiKey := GetAndHashAPIKey(r)
 
-	//Cheking if the hashed api key exists in firestore
-	if !(h.store.ApiKeyExists)(r.Context(), apiKey) {
-		//Writing JSON error to user with status 401 UNAUTHORIZED
-		writeJSONError(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
-
 	//No id provided, fetch all registrations
 	if id == "" {
 		registrations, err := h.store.GetAllRegistrations(r.Context(), apiKey)
@@ -261,13 +248,6 @@ func (h *Handler) RegistrationPutHandler(w http.ResponseWriter, r *http.Request)
 	id := getIDFromRegPath(r.URL.Path)
 	//getting apikey from request header and hashing it
 	apiKey := GetAndHashAPIKey(r)
-
-	//Checking if hashed apikey exists in firestore
-	if !(h.store.ApiKeyExists)(r.Context(), apiKey) {
-		//Writing JSON error to user with status 401 UNAUTHORIZED
-		writeJSONError(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
 
 	if id == "" {
 		//Writing JSON error to user with status 400 BAD REQUEST
@@ -330,13 +310,6 @@ func (h *Handler) RegistrationDeleteHandler(w http.ResponseWriter, r *http.Reque
 	//fetching apikey from request header and hashing it
 	apiKey := GetAndHashAPIKey(r)
 
-	//Check if hashed apikey exists in firestore
-	if !(h.store.ApiKeyExists)(r.Context(), apiKey) {
-		//Writing JSON error to user with status UNAUTHORIZED
-		writeJSONError(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
-
 	//For notification purposes we need to know the registration before deleting
 	reg, err := h.store.GetRegistration(r.Context(), apiKey, id)
 	if err != nil {
@@ -372,12 +345,6 @@ func (h *Handler) RegistrationHeadHandler(w http.ResponseWriter, r *http.Request
 	id := getIDFromRegPath(r.URL.Path)
 	//Getting apikey from request header and hashing it, then store it in the apiKey variable
 	apiKey := GetAndHashAPIKey(r)
-
-	//Check if the API key exists in firestore
-	if !(h.store.ApiKeyExists)(r.Context(), apiKey) {
-		writeJSONError(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
 
 	//No id provided, fetch all registrations
 	if id == "" {
@@ -429,13 +396,6 @@ func (h *Handler) RegistrationPatchHandler(w http.ResponseWriter, r *http.Reques
 	id := getIDFromRegPath(r.URL.Path)
 	//Getting API-key from request header, hashing it and storing it in the apiKey variable
 	apiKey := GetAndHashAPIKey(r)
-
-	//Check if APIkey exists in firestore
-	if !(h.store.ApiKeyExists)(r.Context(), apiKey) {
-		//Writing JSON error if APIKEY is not found with HTTP status code "401 UNAUTHORIZED"
-		writeJSONError(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
 
 	if id == "" {
 		//Writing JSON error if id is empty with HTTP status code "400 BAD REQUEST"

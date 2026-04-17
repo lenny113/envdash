@@ -108,34 +108,27 @@ assignment-2/
         └── logger.go
 ```
 
-### Cmd
+### cmd
+cmd contains the main.go file for running the project
+### internal
+Internal contains most of the files used in the project. These are files that will not be accesible outside the go module developed in the project.
+Meaning if you include this in go.mod the internals will not be exposed. 
+#### client
+Client contains all the api wrappes for external apis, as their own separate packages with their own tests. 
+These are only touched by the local cache and the status endpoint
 
-cmd contains the `main.go` file for running the project.
+#### handlers
+TODO 
+These files contains the endpoints as well as tests for these endpoints. 
 
-### Internal
+#### models
+These contains modular files that contain variables used by multiple files
 
-internal contains most of the files used in the project. These are files that will not be accessible outside the Go module developed in the project. This means that if this module is included in another `go.mod`, the internal packages will not be exposed.
-
-#### Client
-
-Client contains all the Application Programming Interface (API) wrappers for external APIs, as separate packages with their own tests. These are only touched by the local cache and the status endpoint. More details are available in the docs folder: [client.md](./docs/client.md).
-
-#### Handlers
-TODO
-Handlers contain the endpoints, middleware, and tests for the endpoint behavior.
-
-#### Models
-
-Models contain modular files with shared data structures used across multiple files.
-
-#### Store
-
-Store contains the local cache as well as the logic required to connect to Firestore. More details are available in the docs folder: [cache.md](./docs/cache.md).
+#### store
+Store contains the local cache as well as the logic required to connect to firestore
 
 #### Utils
-
-Utils contains the Hypertext Transfer Protocol (HTTP) client factory as well as the logic for the logger.
-
+Utils contains the http client factory as well as the logic for the logger.
 
 ## API Implementation
 
@@ -143,7 +136,7 @@ Utils contains the Hypertext Transfer Protocol (HTTP) client factory as well as 
 
 ### Deployment
 TODO
-Project is hosted on NTNU Openstack: [NTNU Openstack](http://10.212.172.108:8080/)
+Project is hosted on NTNU Openstack: [Envdash endpoint](http://10.212.172.108:8080/)
 
 Must be connected to NTNU Internal Network to access.
 
@@ -153,6 +146,106 @@ Must be connected to NTNU Internal Network to access.
 
 ## API Reference / Documentation
 <details>
+<summary> <h4> Acquire Api Key </h4> </summary>
+
+Simply **POST** your name and email in JSON format to `/envdash/v1/auth/`
+
+Example URL:
+`POST xxxxx:8080/envdash/v1/auth/`
+Body:
+``` json
+{
+  "name": "Alice",
+  "email": "alice@mail.com"
+}
+```
+| Parameter      | Type  | Description                       |
+|:-----------|:------------|:----------------------------    |
+| `name`     | `string`    | *Required*                      |
+| `email`    | `string`    | *Required*. Need to contain "@" |
+
+
+
+#### Response:
+
+| Status Code | Content-Type       |
+| :---------- | :----------------- |
+| `201 Created`    | `application/json` |
+
+
+You will then receive an API key:
+``` json
+{
+  "key": "sk-envdash-YourAPIkey...",
+  "createdAt": "20260317 20:32"
+}
+```
+
+| Fields      | Description                 |
+|:----------- |:----------------------------|
+| `key`       | Your personal API key  |
+| `createdAt` | When the API key was created     |
+
+
+</details>
+
+
+<details>
+<summary> <h4> Delete Api Key </h4> </summary>
+
+Simply **DELETE** your api key using api you want to delete in url `/envdash/v1/auth/{apiKey}` 
+
+Example URL:
+`DELETE xxxxx:8080/envdash/v1/auth/sk-envdash-YourAPIkey`
+
+| Header      | Value: Type | Description                 |
+|:-----------|:------------|:----------------------------|
+| `x-api-key` | {YourAPIkey}       | Needs to be an api key from the same user. You have to be allowed to delete the key. You can delete your own key asswell |
+
+
+#### Response:
+
+| Status Code   |
+|:--------------|
+| `204 No Content` |
+
+When you get the 204, you know that the api key is deleted.
+If you receive any other status code, the API key was not deleted.
+You will get a helpfull error message, try using that to understand
+why the key cant be deleted.
+
+</details>
+
+<details>
+<summary><h4>Check Status of Service: (Firestore, independent third party API, Version, Uptime)</h4></summary>
+
+```http
+  GET /envdash/v1/status/
+```
+
+
+#### Response:
+
+| Status Code  | Content-Type       |
+|:-------------|:-------------------|
+| `200 OK`     | `application/json` |
+
+```json
+{
+    "CountriesAPI": "Status of the REST Countries API",
+    "MeteoAPI": "Status of the Open-Meteo API",
+    "OpenAQAPI": "Status of the OpenAq API",
+    "CurrencyAPI": "Status of the REST Currency API",
+    "NotificationDB": "Status of the Notification database",
+    "webhooks": "Number of webhooks registered",
+    "version": "API Version",
+    "uptime": "Time since last server reboot (In Seconds)"
+}
+```
+
+</details>
+
+<details>
 <summary><h4>Register a Country to get information for:</h4></summary>
 
 ```http
@@ -161,7 +254,7 @@ POST /envdash/v1/registrations/
 
 | Header          | Type     | Description                |
 |:----------------|:---------|:---------------------------|
-| `X-API-Key`     | `string` | **Required**. Your API key |
+| `X-API-Key`     | `string` | **Required**. Your API key  |
 
 #### Example Request Body:
 
@@ -247,7 +340,7 @@ GET /envdash/v1/registrations/{ID}
 
 | Parameter / Header | Type     | Description                       |
 |:-------------------|:---------|:----------------------------------|
-| `X-API-Key`        | `string` | **Required**. Your API key        |
+| `X-API-Key`        | `string` | **Required**. Your API key    (HEADER)      |
 | `ID`               | `string` | **Required**. Your registration ID |
 
 #### Response:
@@ -285,7 +378,7 @@ PUT /envdash/v1/registrations/{ID}
 
 | Parameter / Header | Type     | Description                        |
 |:-------------------|:---------|:-----------------------------------|
-| `X-API-Key`        | `string` | **Required**. Your API key         |
+| `X-API-Key`        | `string` | **Required**. Your API key   (HEADER)        |
 | `ID`               | `string` | **Required**. Your registration ID |
 
 #### Example Request Body:
@@ -328,7 +421,7 @@ PATCH /envdash/v1/registrations/{ID}
 
 | Parameter / Header | Type     | Description                        |
 |:-------------------|:---------|:-----------------------------------|
-| `X-API-Key`        | `string` | **Required**. Your API key         |
+| `X-API-Key`        | `string` | **Required**. Your API key   (HEADER)        |
 | `ID`               | `string` | **Required**. Your registration ID |
 
 #### Example Request Body (all fields optional):
@@ -361,7 +454,7 @@ DELETE /envdash/v1/registrations/{ID}
 
 | Parameter / Header | Type     | Description                        |
 |:-------------------|:---------|:-----------------------------------|
-| `X-API-Key`        | `string` | **Required**. Your API key         |
+| `X-API-Key`        | `string` | **Required**. Your API key    (HEADER)       |
 | `ID`               | `string` | **Required**. Your registration ID |
 
 #### Response:
@@ -381,7 +474,7 @@ GET /envdash/v1/dashboards/{ID}
 
 | Parameter / Header | Type     | Description                        |
 |:-------------------|:---------|:-----------------------------------|
-| `X-API-Key`        | `string` | **Required**. Your API key         |
+| `X-API-Key`        | `string` | **Required**. Your API key   (HEADER)        |
 | `ID`               | `string` | **Required**. Your registration ID |
 
 #### Response:
@@ -421,224 +514,16 @@ GET /envdash/v1/dashboards/{ID}
 </details>
 
 
-<details>
-<summary><h4>Register as a user to receive an API key:</h4></summary>
-
-Simply **POST** your name and email in JSON format to `/envdash/v1/auth/`
-
-Example URL:
-`POST xxxxx:8080/envdash/v1/auth/`
-Body:
-``` json
-{
-  "name": "Alice",
-  "email": "alice@mail.com"
-}
-```
-| Parameter      | Type  | Description                       |
-|:-----------|:------------|:----------------------------    |
-| `name`     | `string`    | *Required*                      |
-| `email`    | `string`    | *Required*. Need to contain "@" |
-
-
-
-#### Response:
-
-| Status Code | Content-Type       |
-| :---------- | :----------------- |
-| `201 Created`    | `application/json` |
-
-
-You will then receive an API key:
-``` json
-{
-  "key": "sk-envdash-YourAPIkey...",
-  "createdAt": "20260317 20:32"
-}
-```
-
-| Fields      | Description                 |
-|:----------- |:----------------------------|
-| `key`       | Your personal API key  |
-| `createdAt` | When the API key was created     |
-
-
-</details>
-
-
-<details>
-<summary> <h2> Delete Api Key </h2> </summary>
-
-Simply **DELETE** your api key using api you want to delete in url `/envdash/v1/auth/{apiKey}` 
-
-Example URL:
-`DELETE xxxxx:8080/envdash/v1/auth/sk-envdash-YourAPIkey`
-
-| Header      | Value: Type | Description                 |
-|:-----------|:------------|:----------------------------|
-| `x-api-key` | {YourAPIkey}       | Needs to be an api key from the same user. You have to be allowed to delete the key. You can delete your own key asswell |
-
-
-#### Response:
-
-| Status Code   |
-|:--------------|
-| `204 No Content` |
-
-When you get the 204, you know that the api key is deleted.
-If you receive any other status code, the API key was not deleted.
-You will get a helpfull error message, try using that to understand
-why the key cant be deleted.
-
-</details>
-
-<details>
-<summary><h4>Check API Statuses: (Firestore, independent third party API, Version, Uptime)</h4></summary>
-
-```http
-  GET /dashboards/v1/status?token={token}
-```
-
-| Parameter | Type     | Description                |
-|:----------|:---------|:---------------------------|
-| `token`   | `string` | **Required**. Your API key |
-
-#### Response:
-
-| Status Code  | Content-Type       |
-|:-------------|:-------------------|
-| `200 OK`     | `application/json` |
-
-```json
-{
-    "CountriesAPI": "Status of the REST Countries API",
-    "MeteoAPI": "Status of the Open-Meteo API",
-    "OpenAQAPI": "Status of the OpenAq API",
-    "CurrencyAPI": "Status of the REST Currency API",
-    "NotificationDB": "Status of the Notification database",
-    "webhooks": "Number of webhooks registered",
-    "version": "API Version",
-    "uptime": "Time since last server reboot (In Seconds)"
-}
-```
-
-</details>
-
-details>
-<summary><h4>Register a Country to get information for:</h4></summary>
-TODO
-```http
-[METHOD] /path/to/endpoint
-```
-
-| Parameter / Header | Type     | Description                          |
-| :----------------- | :------- | :----------------------------------- |
-| `[name]`           | `[type]` | **Required/Optional**. [Description] |
-
-#### Example Request Body:
-
-```json
-{
-  "field": "value"
-}
-```
-
-#### Response:
-
-| Status Code   | Content-Type       |
-| :------------ | :----------------- |
-| `201 Created` | `application/json` |
-
-```json
-{
-  "id": "created-id",
-  "timestamp": "ISO8601 timestamp"
-}
-```
-
-</details>
-
-<details>
-<summary><h4>Retrieve all registered countries:</h4></summary>
-TODO
-```http
-[METHOD] /path/to/endpoint
-```
-
-#### Response:
-
-| Status Code | Content-Type       |
-| :---------- | :----------------- |
-| `200 OK`    | `application/json` |
-
-```json
-[
-  {
-    "id": "item-1"
-  }
-]
-```
-
-</details>
-
-<details>
-<summary><h4>[Endpoint purpose 5]</h4></summary>
-
-```http
-[METHOD] /path/to/endpoint/{id}
-```
-
-#### Response:
-
-| Status Code | Content-Type       |
-| :---------- | :----------------- |
-| `200 OK`    | `application/json` |
-
-```json
-{
-  "id": "item-id",
-  "name": "example"
-}
-```
-
-</details>
-
-<details>
-<summary><h4>[Endpoint purpose 6]</h4></summary>
-
-```http
-[METHOD] /path/to/endpoint/{id}
-```
-
-#### Example Request Body:
-
-```json
-{
-  "fieldToUpdate": "newValue"
-}
-```
-
-#### Response:
-
-| Status Code    | Content-Type       |
-| :------------- | :----------------- |
-| `202 Accepted` | `application/json` |
-
-```json
-{
-  "lastChange": "Updated timestamp"
-}
-```
-
-</details> 
-
 ---
 
 <details>
 <summary><h2> Create Notification </h2></summary>
 
 Simply **POST** your notification query with correct body `/envdash/v1/notifications/`
- [Remember to have Api Key in header] 
+
+|  Header | Type     | Description                        |
+|:-------------------|:---------|:-----------------------------------|
+| `X-API-Key`        | `string` | **Required**. Your API key        |
 
 ```http
 POST /envdash/v1/notifications/
@@ -652,6 +537,7 @@ We have two type of notificaitons, lifecycle and threshold:
    "event":   "INVOKE"
 }
 ````
+
 ````json
 {
    "url":     "https://webhook.site/your-unique-URL",
@@ -667,7 +553,29 @@ We have two type of notificaitons, lifecycle and threshold:
 
 
 #### Parameters:
-For a detailed look at the parameters take a look here: [Parameters](docs/Notifications.md#parameters)
+
+| Parameter      | Type  | Description                       |
+|:-----------|:------------|:----------------------------    |
+| `url`     | `string`    | *Required* URL to where you want your notification                     |
+| `country`    | `string`    | *Optional*  2 letter country code ([lookup here](https://datahub.io/core/country-list)). Omit or leave empty to match all countries|
+| `event`     | `string`    | *Required* One of: `REGISTER`, `CHANGE`, `DELETE`, `INVOKE`, `THRESHOLD`                    |
+
+
+| Event | Triggered when… |
+|-------|-----------------|
+| `REGISTER` | A new dashboard configuration is registered (`POST /registrations/`) |
+| `CHANGE` | A configuration is updated (`PUT` or `PATCH /registrations/{id}`) |
+| `DELETE` | A configuration is deleted (`DELETE /registrations/{id}`) |
+| `INVOKE` | A populated dashboard is retrieved (`GET /dashboards/{id}`) |
+| `THRESHOLD` | A live measured value crosses a user-defined threshold during dashboard retrieval |
+
+For threshold notificatoins:
+| Parameter      | Type  | Description                       |
+|:-----------|:------------|:----------------------------    |
+| `threshold.field`  | `string`    | *Required* Field to monitor: `pm25` \| `pm10` \| `temperature` \| `precipitation`                   |
+| `threshold.operator`| `Comparison operator`    | *Required*  Comparison operator: `>`, `<`, `>=`, `<=`, `==` |
+| `threshold.value`  | `string`    | *Required* Numeric threshold value        |
+
 
 
 #### Response:
@@ -696,6 +604,10 @@ Simply **GET** your notifcation by `/envdash/v1/notifications/{ID_Of_Notifcation
 Example URL:
 `GET xxxxx:8080/envdash/v1/notifications/uUmLcayWY9WgGL26ASDp`
 
+|  Header | Type     | Description                        |
+|:-------------------|:---------|:-----------------------------------|
+| `X-API-Key`        | `string` | **Required**. Your API key        |
+
 -Body empty-
 
 #### Response:
@@ -722,10 +634,6 @@ Body:
 }
 ```
 
-### Parameters
-For a detailed look at the parameters take a look here: [Parameters](docs/Notifications.md#parameters)
-
-
 considerations: everyone can read your webhook even non owners of the particular webhooks as long as they know the ID
 
 </details>
@@ -739,6 +647,10 @@ Simply **GET** `/envdash/v1/notifications/`
 
 Example URL:
 `GET xxxxx:8080/envdash/v1/notifications/`
+
+|  Header | Type     | Description                        |
+|:-------------------|:---------|:-----------------------------------|
+| `X-API-Key`        | `string` | **Required**. Your API key |
 
 -Body empty-
 
@@ -769,8 +681,11 @@ You wil now see every notification registerd to your account
 }
 ```
 
-### Parameters
-For a detailed look at the parameters take a look here: [Parameters](docs/Notifications.md#parameters)|
+TODO: fields in separate document!!!
+| Fields      | Description                 |
+|:----------- |:----------------------------|
+| `key`       | Your personal API key  |
+| `createdAt` | When the API key was created     |
 
 </details>
 
@@ -784,6 +699,11 @@ Simply **DELETE** your notification `/envdash/v1/notifications/{NotificationID}`
 
 Example URL:
 `DELETE xxxxx:8080/envdash/v1/notifications/6pSNoPNL08oroGqRWoAR`
+
+|  Header | Type     | Description                        |
+|:-------------------|:---------|:-----------------------------------|
+| `X-API-Key`        | `string` | **Required**. Your API key        |
+
 -Body empty-
 
 #### Response:
@@ -802,38 +722,6 @@ This is desided on your api key you use in header.
 
 
 
-
----
-
-s
-
----
-
-s
-
----
-
-| Fields      | Description                 |
-|:----------- |:----------------------------|
-| `key`       | Your personal API key  |
-| `createdAt` | When the API key was created     |
-
-
-
-<details>
-<summary><h4>[Endpoint purpose 7]</h4></summary>
-
-```http
-[METHOD] /path/to/endpoint/{id}
-```
-
-#### Response:
-
-| Status Code      |
-| :--------------- |
-| `204 No Content` |
-
-</details>
 
 ## Environment Variables
 
@@ -991,8 +879,8 @@ docker compose down [test-service-name]
 * Implement Firestore caching
     - the architecture supports this, we just need to implement it.
 * Optimize the openAQ api call
-    - Currently this works by calling on a country code and using the first page of the result.
-      this is not an accurate measurement. But it was needed to get theuntryinfo in one api call.
+    - currently this works by calling on a country code and filtering through the results.
+      this can often lead to 30+ calls, while the client is ratelimited so we dont disrupt external services, a better call shoould be found
 
 ## Support
 

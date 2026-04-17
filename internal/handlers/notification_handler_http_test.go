@@ -92,7 +92,15 @@ func TestNotificationSpinner_MethodNotAllowed(t *testing.T) {
 func TestNotificationSpinnerById_GET_routed(t *testing.T) {
 	store := &MockStore{
 		GetSpecificNotificationFn: func(_ context.Context, id string) (models.AllRegisteredWebhook, *firestore.DocumentRef, error) {
-			return models.AllRegisteredWebhook{Id: id}, nil, nil
+			return models.AllRegisteredWebhook{
+				Id: id,
+				RegisterWebhook: models.RegisterWebhook{
+					User: "test@example.com",
+				},
+			}, nil, nil
+		},
+		FindUserWithApiKeyFn: func(_ context.Context, apiKey string) (string, error) {
+			return "test@example.com", nil
 		},
 	}
 	h := notificationHandlerWithStore(store)
@@ -417,12 +425,19 @@ func TestAllNotifications_ContentTypeJSON(t *testing.T) {
 
 func TestSpecificNotification_Found(t *testing.T) {
 	want := models.AllRegisteredWebhook{
-		Id:              "abc",
-		RegisterWebhook: models.RegisterWebhook{Url: "https://hook.io", Event: utils.VALIDEVENTS[0]},
+		Id: "abc",
+		RegisterWebhook: models.RegisterWebhook{
+			Url:  "https://hook.io",
+			Event: utils.VALIDEVENTS[0],
+			User: "test@example.com",
+		},
 	}
 	store := &MockStore{
 		GetSpecificNotificationFn: func(_ context.Context, id string) (models.AllRegisteredWebhook, *firestore.DocumentRef, error) {
 			return want, nil, nil
+		},
+		FindUserWithApiKeyFn: func(_ context.Context, apiKey string) (string, error) {
+			return "test@example.com", nil
 		},
 	}
 	h := notificationHandlerWithStore(store)

@@ -105,6 +105,11 @@ func main() {
 	privateRouter := http.NewServeMux()
 	privateRouter.HandleFunc("/", handler.DefaultHandler)
 
+	//Dashboards
+	privateRouter.HandleFunc(utils.DASHBOARD_PATH, h.DashboardHandler)
+	privateRouter.HandleFunc(utils.DASHBOARD_PATH+"/", h.DashboardHandler)
+	privateRouter.HandleFunc(utils.DASHBOARD_PATH+"/{id}", h.DashboardHandler)
+
 	///Notification
 	privateRouter.HandleFunc(utils.NOTIFICATION_PATH, h.NotificationSpinner)
 	privateRouter.HandleFunc(utils.NOTIFICATION_PATH+"/", h.NotificationSpinner)
@@ -113,14 +118,13 @@ func main() {
 
 	///Registration
 	privateRouter.HandleFunc(utils.REGISTRATION_PATH, h.RegistrationHandler)
+	privateRouter.HandleFunc(utils.REGISTRATION_PATH+"/", h.RegistrationHandler)
 
 	//Only for some of the routnes, not global
 	router.Handle("/", h.AuthMiddleware(privateRouter))
 
 	// Configure the HTTP server with the network address and
 	// the router wrapped in logging middleware.
-	router.HandleFunc(utils.REGISTRATION_PATH, h.RegistrationHandler)
-
 	server := http.Server{
 		Addr:    ":" + port,
 		Handler: utils.Logging(router),
